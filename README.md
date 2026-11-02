@@ -2,7 +2,7 @@
 
 Outil de PMO IA-first : l'assistant reçoit le contexte des projets, répartit le travail, suit les tâches, demande pourquoi elles sont en retard et apprend de ces explications. Voir `docs/vision.md`.
 
-Autres documents : `docs/analyse-monday-com.md` (analyse de départ), `prototype/index.html` (maquette interactive), `docs/deploiement-vps.md` (mise en production).
+Autres documents : `docs/assistant-ia.md` (fonctionnement détaillé de l'assistant IA), `docs/deploiement-vps.md` (mise en production), `docs/analyse-monday-com.md` (analyse de départ), `prototype/index.html` (maquette interactive).
 
 ## Démarrer en local
 
@@ -22,6 +22,8 @@ Sans `DATABASE_URL`, l'app utilise PGlite, un vrai PostgreSQL embarqué stocké 
 - Toutes les écritures passent par `lib/db/repo.ts`.
 
 ## L'assistant IA
+
+Documentation complète : `docs/assistant-ia.md`.
 
 - **Passerelle : OpenRouter**, via son point d'entrée compatible avec l'API Messages de Claude. Le code utilise le SDK officiel `@anthropic-ai/sdk` ; changer de passerelle ne touche que `lib/ai/client.ts`.
 - **Modèle :** `AI_MODEL` (défaut `anthropic/claude-opus-5.5`).
