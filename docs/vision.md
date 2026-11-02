@@ -100,6 +100,7 @@ Les essais se font avec des membres numérotés jusqu'à la fin de la phase E.
 
 ## Avancement
 
+- 2026-11-02 : nouvelle page d'accueil « Aujourd'hui » : le point du jour sur tout le portefeuille, avec des actions en un clic confiées à l'assistant. L'outil s'ouvre sur les décisions à prendre, plus sur un tableau. Premier pas de la phase C, sans tâche planifiée ni envoi pour l'instant.
 - 2026-11-02 : phase A livrée (schéma multi-projets, historique des tâches, PGlite en local, PostgreSQL 17 sur le VPS via Docker, tests sur les deux).
 
 ## Décisions prises

@@ -17,7 +17,23 @@ const repo = await import("../lib/db/repo");
 const { seedDemo, DEMO_ORG_ID } = await import("../lib/db/seed");
 const s = await import("../lib/db/schema");
 
+const { computeBrief } = await import("../lib/brief");
 const db = await getDb();
+
+// 0. Point du jour sur les données de démonstration, au 2 novembre 2026 (avant toute modification)
+const brief = await computeBrief(db, DEMO_ORG_ID, "Zaki", "2026-11-02");
+assert.equal(brief.headline, "1 point à traiter aujourd'hui, 2 à surveiller.");
+assert.deepEqual(brief.items.map((i) => [i.severity, i.kind]), [[3, "blocked"], [2, "deliverable"], [2, "overload"]]);
+const blocked = brief.items[0];
+assert.match(blocked.detail, /accès au registrar/, "le dernier message est cité");
+assert.ok(blocked.actions.every((a) => a.type === "ask" && a.projectId === "prj_site" && a.prompt.length > 20));
+assert.match(brief.items[2].title, /Sami porte 4 tâches ouvertes sur 2 projets/);
+assert.deepEqual(brief.pulse.map((p) => [p.id, p.state]), [["prj_site", "late"], ["prj_crm", "watch"]]);
+// Plus tard, la tâche « Choisir les photos » (todo, 06/11) devient une échéance proche, puis un retard
+const later = await computeBrief(db, DEMO_ORG_ID, "Zaki", "2026-11-04");
+assert.ok(later.items.some((i) => i.kind === "due_soon" && i.title.includes("Choisir les photos")));
+const late = await computeBrief(db, DEMO_ORG_ID, "Zaki", "2026-11-09");
+assert.ok(late.items.some((i) => i.kind === "overdue" && i.title.includes("Choisir les photos") && i.title.includes("3 jours")));
 const zaki = await repo.memberIdByName(db, DEMO_ORG_ID, "Zaki");
 const actor = { memberId: zaki, kind: "member" as const };
 
@@ -80,5 +96,5 @@ assert.equal((await repo.countAiRequest(db, DEMO_ORG_ID, 3)).ok, false);
 await repo.recordAiTokens(db, DEMO_ORG_ID, { input: 10, output: 5, cacheRead: 100, cacheWrite: 0 });
 assert.deepEqual(await repo.getAiUsage(db, DEMO_ORG_ID), { requests: 3, input: 10, output: 5, cacheRead: 100, cacheWrite: 0 });
 
-console.log(`OK (${process.env.DATABASE_URL ? "PostgreSQL" : "PGlite"}) : 10 vérifications de la base passées (multi-projets, historique, glissement, automatisations, garde-fous, quota)`);
+console.log(`OK (${process.env.DATABASE_URL ? "PostgreSQL" : "PGlite"}) : 11 vérifications de la base passées (point du jour, multi-projets, historique, glissement, automatisations, garde-fous, quota)`);
 process.exit(0);

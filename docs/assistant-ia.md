@@ -11,6 +11,27 @@ L'assistant est un chat attaché à un projet. Il connaît le contexte du projet
 
 Il ne fait encore rien de lui-même : pas de suivi quotidien, de relances ni de demandes d'explication. Ce sont les phases C à E de la feuille de route.
 
+## Le point du jour (page d'accueil)
+
+`lib/brief.ts` calcule, sans appel à l'IA, ce qui demande l'attention du PMO sur tous les projets actifs :
+
+| Type | Règle | Priorité |
+|---|---|---|
+| Bloqué | Tâche au statut Bloqué ; le dernier message de la tâche est cité | À traiter aujourd'hui |
+| En retard | Tâche non terminée dont l'échéance est passée | À traiter aujourd'hui |
+| Échéance proche | Tâche pas commencée à 3 jours ou moins de son échéance | Cette semaine |
+| Glissement | Échéance postérieure à la date du plan de référence | Cette semaine si 5 jours ou plus, sinon à surveiller |
+| Surcharge | Une personne avec 4 tâches ouvertes ou plus, tous projets confondus | Cette semaine si plusieurs projets |
+| Livrable | Livrable dans 14 jours ou moins avec des tâches ouvertes | Aujourd'hui si 5 jours ou moins |
+
+Chaque point propose des actions. Une action ouvre le projet et envoie à l'assistant une consigne déjà rédigée, par exemple « Ajoute un commentaire courtois pour relancer Sami… ». Les consignes qui pourraient modifier beaucoup de choses, comme le rééquilibrage de charge, demandent explicitement de ne rien modifier sans accord.
+
+Le « rythme » d'un projet compare la part des tâches terminées à la part du temps écoulé entre le début et la fin du projet.
+
+Le bouton « Plus tard » masque un point jusqu'au lendemain, dans le navigateur seulement.
+
+Le point du jour préfigure la phase C : le même calcul, lancé chaque matin, alimentera le point envoyé par courriel.
+
 ## Parcours d'une demande
 
 ```

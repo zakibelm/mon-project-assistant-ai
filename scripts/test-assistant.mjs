@@ -54,6 +54,12 @@ for (let i = 0; i < 60; i++) { try { await fetch(base + "/api/projects"); break;
 const ask = (message) => fetch(base + "/api/assistant", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ projectId: "prj_site", message }) }).then(async (r) => ({ status: r.status, data: await r.json() }));
 
 try {
+  // 0. Point du jour
+  const brief = await fetch(base + "/api/brief").then((r) => r.json());
+  assert.equal(brief.user, "Zaki");
+  assert.ok(brief.items.some((i) => i.kind === "blocked"), "le blocage du seed est signalé");
+  assert.equal(brief.pulse.length, 2);
+
   // 1. Planification avec outils
   const r1 = await ask("Planifie un événement client");
   assert.equal(r1.status, 200, JSON.stringify(r1.data));
@@ -108,7 +114,7 @@ try {
   const r5 = await fetch(base + "/api/assistant", { method: "POST", body: JSON.stringify({ projectId: "inconnu", message: "x" }) });
   assert.equal(r5.status, 404);
 
-  console.log("OK : 5 scénarios passés (planification avec outils et historique, refus, clé refusée, requête invalide, projet inconnu)");
+  console.log("OK : 6 scénarios passés (point du jour, planification avec outils et historique, refus, clé refusée, requête invalide, projet inconnu)");
 } catch (e) {
   console.error(e.message, "\n--- logs app ---\n", logs.slice(-2000));
   process.exitCode = 1;

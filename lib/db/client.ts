@@ -30,6 +30,8 @@ async function open(): Promise<Db> {
     const { drizzle } = await import("drizzle-orm/pglite");
     const { migrate } = await import("drizzle-orm/pglite/migrator");
     const dir = process.env.PGLITE_DIR || path.join(process.cwd(), ".data", "pglite");
+    // PGlite ne crée pas les dossiers parents : sans ceci, le premier lancement d'un clone échoue.
+    if (!dir.includes("://")) (await import("fs")).mkdirSync(dir, { recursive: true });
     const lite = drizzle({ client: new PGlite(dir), schema });
     await migrate(lite, { migrationsFolder: MIGRATIONS });
     db = lite as unknown as Db;
