@@ -28,6 +28,7 @@
   --keep:#4CB27A; --modify:#E0A52C; --remove:#E2675F;
   --keep-soft:#173327; --modify-soft:#3A2E12; --remove-soft:#3D1D1B; color-scheme:dark}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
 button,input,select,textarea{font:inherit;color:inherit}
@@ -160,10 +161,76 @@ td.c{border-left:1px solid var(--line);width:1%}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:999px;font-size:13px}
 #copyfallback{width:100%;min-height:180px;margin-top:12px;font-family:var(--f-mono);font-size:12px;border:1px solid var(--line);border-radius:var(--r);padding:10px;background:var(--surface)}
 @media (prefers-reduced-motion:no-preference){.card,.btn,.dseg button{transition:background .15s,border-color .15s}}
-</style>
 
+/* ---------- v0.2 additions ---------- */
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;align-items:center}
+.filters input,.filters select{border:1px solid var(--line);border-radius:var(--r);padding:6px 10px;background:var(--surface)}
+.filters input[type=search]{flex:1;min-width:160px;max-width:320px}
+.iconbtn{position:relative;border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:6px 10px}
+.iconbtn .dot{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;border-radius:9px;background:var(--remove);color:#fff;font-size:11px;font-family:var(--f-mono);display:grid;place-items:center;padding:0 4px}
+.pop{position:absolute;right:0;top:calc(100% + 6px);width:min(340px,90vw);background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 8px 24px rgb(0 0 0 / .14);z-index:6;padding:10px;display:flex;flex-direction:column;gap:8px}
+.pop h4{margin:0;font-size:13px;display:flex;justify-content:space-between;align-items:center}
+.pop ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;max-height:300px;overflow:auto}
+.pop li{font-size:13px;padding:6px 8px;border-radius:6px;background:var(--sunken)}
+.pop li small{display:block;color:var(--muted);font-family:var(--f-mono);font-size:11px}
+.autos{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px;font-size:12px;color:var(--muted)}
+.autos .rule{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px 4px 3px 10px;color:var(--ink);display:inline-flex;gap:6px;align-items:center}
+.autos .rule button{border:0;background:transparent;color:var(--muted);padding:0 6px}
+.group h3 input.gname{border:0;background:transparent;font:inherit;padding:2px 4px;border-radius:4px;min-width:0;width:auto;field-sizing:content}
+.group h3 input.gname:hover{background:var(--sunken)}
+.group h3 .fold{border:0;background:transparent;color:var(--muted);padding:0 4px;width:22px}
+td.name{position:relative}
+td.name .open{position:absolute;right:6px;top:8px;border:1px solid var(--line);background:var(--surface);border-radius:6px;font-size:12px;padding:1px 8px;color:var(--muted);opacity:0}
+tr:hover td.name .open,td.name .open:focus-visible{opacity:1}
+@media (hover:none){td.name .open{opacity:1}}
+td.name input{padding-right:70px}
+.sub button{border:0;background:transparent;color:inherit;font:inherit;padding:0}
+.ccount{font-family:var(--f-mono);font-size:11px;color:var(--muted);padding:0 10px;white-space:nowrap}
+.card .badges{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11px;color:var(--muted);font-family:var(--f-mono)}
+.card .badges span{white-space:nowrap}
+.empty{padding:28px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:var(--r);margin-top:16px}
+/* calendar */
+.cal{margin-top:16px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);overflow-x:auto}
+.calhead{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line)}
+.calhead b{font-family:var(--f-display);font-size:16px;text-transform:capitalize}
+.calgrid{display:grid;grid-template-columns:repeat(7,minmax(96px,1fr));min-width:690px}
+.calgrid .dow{font-family:var(--f-mono);font-size:11px;text-transform:uppercase;color:var(--muted);padding:6px 8px;background:var(--sunken);border-bottom:1px solid var(--line)}
+.calgrid .day{min-height:96px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:4px;display:flex;flex-direction:column;gap:3px}
+.calgrid .day:nth-child(7n){border-right:0}
+.calgrid .day.out{background:var(--sunken)} .calgrid .day.out .num{opacity:.5}
+.calgrid .num{font-family:var(--f-mono);font-size:11px;color:var(--muted);padding:2px 4px}
+.calgrid .day.today .num{background:var(--accent);color:var(--accent-ink);border-radius:4px;align-self:flex-start}
+.calgrid .ev{border:0;text-align:left;font-size:11.5px;padding:3px 6px;border-radius:4px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* drawer */
+.scrim{position:fixed;inset:0;background:rgb(10 20 25 / .35);z-index:20}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,100vw);background:var(--surface);border-left:1px solid var(--line);z-index:21;display:flex;flex-direction:column;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);padding-right:env(safe-area-inset-right,0px)}
+.drawer .dh{display:flex;gap:10px;align-items:flex-start;padding:16px 18px;border-bottom:1px solid var(--line)}
+.drawer .dh input{flex:1;min-width:0;font-family:var(--f-display);font-size:19px;font-weight:600;border:0;background:transparent;padding:2px 4px;border-radius:4px}
+.drawer .dh input:hover{background:var(--sunken)}
+.drawer .body{flex:1;overflow:auto;padding:16px 18px;display:flex;flex-direction:column;gap:20px}
+.drawer .props{display:grid;grid-template-columns:110px 1fr;gap:8px 12px;align-items:center;font-size:13px}
+.drawer .props span{color:var(--muted)}
+.drawer .props select,.drawer .props input{border:1px solid var(--line);border-radius:6px;padding:5px 8px;background:var(--bg)}
+.drawer h4{margin:0 0 8px;font-size:13px;display:flex;gap:8px;align-items:center}
+.checklist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.checklist li{display:flex;gap:8px;align-items:center;font-size:13px}
+.checklist li.d label{text-decoration:line-through;color:var(--muted)}
+.checklist li button{margin-left:auto;border:0;background:transparent;color:var(--muted)}
+.inline{display:flex;gap:8px;margin-top:8px}
+.inline input,.inline textarea{flex:1;min-width:0;border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:var(--bg)}
+.comments{display:flex;flex-direction:column;gap:10px}
+.com{display:flex;gap:10px}
+.av{width:28px;height:28px;border-radius:50%;background:var(--accent-soft);color:var(--ink);display:grid;place-items:center;font-size:12px;font-weight:600;flex:none}
+.com .txt{font-size:13px;background:var(--sunken);border-radius:8px;padding:6px 10px;min-width:0;overflow-wrap:anywhere}
+.com .txt small{display:block;color:var(--muted);font-family:var(--f-mono);font-size:11px}
+.mention{color:var(--accent);font-weight:600}
+.aisum{font-size:13px;background:var(--accent-soft);border-radius:8px;padding:8px 10px}
+.toast{display:flex;gap:12px;align-items:center;z-index:30}
+.toast button{border:0;background:transparent;color:var(--bg);text-decoration:underline;font-weight:600;padding:0}
+</style>
 <header class="top"><div class="wrap">
-  <div class="brand"><b>Assistant Projet</b><span>prototype v0.1</span></div>
+  <div class="brand"><b>Assistant Projet</b><span>prototype v0.2</span></div>
   <nav class="tabs" aria-label="Sections">
     <a href="#prototype" id="tab-prototype">Prototype</a>
     <a href="#decisions" id="tab-decisions">Garder / modifier / supprimer<span class="n" id="tabcount"></span></a>
@@ -171,10 +238,9 @@ td.c{border-left:1px solid var(--line);width:1%}
 </div></header>
 
 <main class="wrap">
-<!-- ===== PROTOTYPE ===== -->
 <section id="v-prototype">
   <h1>Notre copie de Monday.com, en version IA-first</h1>
-  <p class="lede">Tout fonctionne dans cette page : modifiez les tâches, changez de vue, glissez les cartes et parlez à l'assistant. Les pastilles de couleur renvoient à votre décision pour chaque fonctionnalité dans l'onglet « Garder / modifier / supprimer ».</p>
+  <p class="lede">Tout fonctionne et vos modifications sont gardées dans ce navigateur. Ouvrez une tâche pour voir ses sous-tâches et ses commentaires, passez en vue Calendrier, ou demandez à l'assistant de créer une automatisation. Chaque pastille de couleur ouvre la décision correspondante.</p>
 
   <div class="proto">
     <div style="min-width:0">
@@ -185,14 +251,30 @@ td.c{border-left:1px solid var(--line);width:1%}
         </div>
         <div class="tools">
           <div class="seg" role="group" aria-label="Vue">
-            <button id="vt-table" aria-pressed="true">Tableau</button>
-            <button id="vt-kanban" aria-pressed="false">Kanban</button>
+            <button id="vt-table" data-v="table" aria-pressed="true">Tableau</button>
+            <button id="vt-kanban" data-v="kanban" aria-pressed="false">Kanban</button>
+            <button id="vt-cal" data-v="cal" aria-pressed="false">Calendrier</button>
           </div>
-          <a class="fb" data-f="views" href="#decisions"><i></i></a>
-          <button class="btn" id="addgroup">+ Groupe</button>
-          <label class="chk"><input type="checkbox" id="showfb" checked> Pastilles</label>
+          <div style="position:relative">
+            <button class="iconbtn" id="bell" aria-haspopup="true" aria-expanded="false">Notifications<span class="dot" id="bellcount" hidden></span></button>
+            <div class="pop" id="notifpop" hidden>
+              <h4>Notifications <a class="fb" data-f="notifs" href="#decisions"><i></i></a></h4>
+              <ul id="notiflist"></ul>
+              <button class="btn" id="readall">Tout marquer comme lu</button>
+            </div>
+          </div>
         </div>
       </div>
+
+      <div class="filters">
+        <input id="q" type="search" placeholder="Rechercher une tâche" aria-label="Rechercher une tâche">
+        <select id="fwho" aria-label="Filtrer par responsable"><option value="">Toute l'équipe</option></select>
+        <button class="btn" id="addgroup">+ Groupe</button>
+        <label class="chk"><input type="checkbox" id="showfb" checked> Pastilles</label>
+        <button class="btn" id="resetdemo" style="margin-left:auto">Réinitialiser la démo</button>
+      </div>
+
+      <div class="autos" id="autos"></div>
 
       <div class="progress">
         <div class="bar" id="bar"></div>
@@ -201,6 +283,7 @@ td.c{border-left:1px solid var(--line);width:1%}
 
       <div id="tableview"></div>
       <div id="kanbanview" hidden></div>
+      <div id="calview" hidden></div>
     </div>
 
     <aside class="assist" aria-label="Assistant IA">
@@ -208,20 +291,18 @@ td.c{border-left:1px solid var(--line);width:1%}
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
           <h2>Assistant</h2><a class="fb" data-f="ai-agent" href="#decisions"><i></i></a>
         </div>
-        <p>Simulation locale : pas encore relié à Claude. Les commandes ci-dessous modifient vraiment le board.</p>
+        <p>Simulation locale : pas encore relié à Claude. Les commandes modifient vraiment le board.</p>
       </header>
-      <div class="log" id="log"></div>
+      <div class="log" id="log" aria-live="polite"></div>
       <div class="sugg" id="sugg"></div>
-      <form id="askform"><input id="ask" placeholder="Ex. ajoute « Rédiger la FAQ » pour Sami" autocomplete="off" aria-label="Message à l'assistant"><button class="btn primary">Envoyer</button></form>
+      <form id="askform"><input id="ask" placeholder="Ex. quand une tâche est terminée, préviens Léa" autocomplete="off" aria-label="Message à l'assistant"><button class="btn primary">Envoyer</button></form>
     </aside>
   </div>
 </section>
 
-<!-- ===== DECISIONS ===== -->
 <section id="v-decisions" hidden>
   <h1>Ce qu'on garde, ce qu'on modifie, ce qu'on supprime</h1>
   <p class="lede">Chaque ligne reprend une fonctionnalité de Monday.com avec ma recommandation déjà cochée. Changez le choix ou ajoutez une note, puis copiez la synthèse et collez-la dans la conversation : je m'en servirai pour construire la vraie application. Vos choix restent enregistrés dans ce navigateur.</p>
-
   <div class="dsum" id="dsum"></div>
   <div class="dbar">
     <button class="btn primary" id="copy">Copier la synthèse</button>
@@ -232,10 +313,20 @@ td.c{border-left:1px solid var(--line);width:1%}
   <div id="cats"></div>
 </section>
 </main>
-<div class="toast" id="toast" hidden></div>
 
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" hidden role="dialog" aria-modal="true" aria-label="Détail de la tâche"></aside>
+<div class="toast" id="toast" hidden role="status"><span id="toastmsg"></span><button id="toastact" hidden></button></div>
 <script>
 (function(){
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const norm=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const TODAY="2026-11-02";
+const fmt=d=>d?d.slice(8)+"/"+d.slice(5,7):"—";
+const nowStamp=()=>{const d=new Date();return d.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});};
+
 /* ---------------- Feature catalogue ---------------- */
 const FEATURES = [
  {id:"workspaces",cat:"Structure",name:"Espaces de travail et dossiers",mon:"Compte › workspaces › dossiers › boards, plus des espaces séparés par produit.",prop:"Un espace par client ou équipe, et des dossiers simples. Pas de séparation par produit.",rec:"keep"},
@@ -271,125 +362,268 @@ const FEATURES = [
  {id:"lang",cat:"Offre",name:"Langue et marché",mon:"Produit pensé d'abord en anglais.",prop:"Pensé d'abord en français (interface, assistant, formats de date), anglais en second.",rec:"modify"}
 ];
 const LBL={keep:"Garder",modify:"Modifier",remove:"Supprimer"};
-const STKEY="ap-decisions-v1";
-let dec={}; try{dec=JSON.parse(localStorage.getItem(STKEY)||"{}")||{}}catch(e){dec={}}
+const DKEY="ap-decisions-v1";
+let dec=store.get(DKEY)||{};
 FEATURES.forEach(f=>{ if(!dec[f.id]) dec[f.id]={v:f.rec,note:""}; });
-function save(){ try{localStorage.setItem(STKEY,JSON.stringify(dec))}catch(e){} }
+const saveDec=()=>store.set(DKEY,dec);
 
 /* ---------------- Board state ---------------- */
 const ST=[["todo","À faire","--st-todo"],["doing","En cours","--st-doing"],["block","Bloqué","--st-block"],["done","Terminé","--st-done"]];
-const PEOPLE=["Zaki","Sami","Léa","Inès","—"];
-let uid=100;
-let groups=[{id:"g1",name:"Cette semaine",color:"var(--accent)"},{id:"g2",name:"Semaine prochaine",color:"var(--st-doing)"},{id:"g3",name:"Plus tard",color:"var(--st-todo)"}];
-let items=[
- {id:1,g:"g1",name:"Valider la maquette de la page d'accueil",s:"done",who:"Léa",due:"2026-11-03",p:"Haute",sub:"3/3"},
- {id:2,g:"g1",name:"Rédiger les textes des pages services",s:"doing",who:"Zaki",due:"2026-11-05",p:"Haute",sub:"1/4"},
- {id:3,g:"g1",name:"Configurer le nom de domaine et le SSL",s:"block",who:"Sami",due:"2026-11-04",p:"Moyenne",sub:"0/2"},
- {id:4,g:"g1",name:"Choisir les photos de l'équipe",s:"todo",who:"Inès",due:"2026-11-06",p:"Basse",sub:""},
- {id:5,g:"g2",name:"Intégrer le formulaire de contact",s:"todo",who:"Sami",due:"2026-11-10",p:"Moyenne",sub:"0/3"},
- {id:6,g:"g2",name:"Mettre en place Google Analytics",s:"todo",who:"Zaki",due:"2026-11-11",p:"Basse",sub:""},
- {id:7,g:"g2",name:"Relire l'ensemble des pages",s:"todo",who:"Léa",due:"2026-11-12",p:"Moyenne",sub:""},
- {id:8,g:"g3",name:"Préparer l'annonce sur LinkedIn",s:"todo",who:"Inès",due:"2026-11-18",p:"Basse",sub:""}
-];
-let view="table";
-const $=s=>document.querySelector(s);
-const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const PEOPLE=["Zaki","Sami","Léa","Inès"];
 const stName=s=>ST.find(x=>x[0]===s)[1];
+const stVar=s=>ST.find(x=>x[0]===s)[2];
+const sub=(t,d)=>({t,d:!!d});
+function demo(){return {
+  uid:100,
+  groups:[{id:"g1",name:"Cette semaine",color:"var(--accent)"},{id:"g2",name:"Semaine prochaine",color:"var(--st-doing)"},{id:"g3",name:"Plus tard",color:"var(--st-todo)"}],
+  items:[
+   {id:1,g:"g1",name:"Valider la maquette de la page d'accueil",s:"done",who:"Léa",due:"2026-11-03",p:"Haute",subs:[sub("Version mobile",1),sub("Version bureau",1),sub("Retour client",1)],com:[{who:"Léa",txt:"Maquette envoyée au client.",at:"lun. 09:12"},{who:"Zaki",txt:"Validée, merci @Léa !",at:"lun. 14:40"}]},
+   {id:2,g:"g1",name:"Rédiger les textes des pages services",s:"doing",who:"Zaki",due:"2026-11-05",p:"Haute",subs:[sub("Conseil",1),sub("Formation"),sub("Accompagnement"),sub("Relecture SEO")],com:[{who:"Zaki",txt:"Premier jet du texte Conseil dans le dossier partagé.",at:"lun. 10:05"}]},
+   {id:3,g:"g1",name:"Configurer le nom de domaine et le SSL",s:"block",who:"Sami",due:"2026-11-04",p:"Moyenne",subs:[sub("Accès registrar"),sub("Certificat SSL")],com:[{who:"Sami",txt:"Il me manque les accès au registrar. @Zaki tu peux me les transmettre ?",at:"lun. 11:30"},{who:"Inès",txt:"Je crois que c'est le compte de l'ancien prestataire.",at:"lun. 11:52"}]},
+   {id:4,g:"g1",name:"Choisir les photos de l'équipe",s:"todo",who:"Inès",due:"2026-11-06",p:"Basse",subs:[],com:[]},
+   {id:5,g:"g2",name:"Intégrer le formulaire de contact",s:"todo",who:"Sami",due:"2026-11-10",p:"Moyenne",subs:[sub("Champs"),sub("Anti-spam"),sub("E-mail de confirmation")],com:[]},
+   {id:6,g:"g2",name:"Mettre en place Google Analytics",s:"todo",who:"Zaki",due:"2026-11-11",p:"Basse",subs:[],com:[]},
+   {id:7,g:"g2",name:"Relire l'ensemble des pages",s:"todo",who:"Léa",due:"2026-11-12",p:"Moyenne",subs:[],com:[]},
+   {id:8,g:"g3",name:"Préparer l'annonce sur LinkedIn",s:"todo",who:"Inès",due:"2026-11-18",p:"Basse",subs:[],com:[]}
+  ],
+  autos:[{id:"a1",on:"block",notify:"Zaki"}],
+  notifs:[{txt:"Sami a passé « Configurer le nom de domaine et le SSL » à Bloqué.",at:"lun. 11:31",read:false}],
+  view:"table", calMonth:"2026-11"
+};}
+const BKEY="ap-board-v2";
+let S=store.get(BKEY)||demo();
+const save=()=>store.set(BKEY,S);
+let q="",fwho="";
+const visible=()=>S.items.filter(i=>(!fwho||i.who===fwho)&&(!q||norm(i.name).includes(norm(q))));
 
-function renderProgress(){
-  const n=items.length||1;
-  $("#bar").innerHTML=ST.map(([k,,c])=>{const w=items.filter(i=>i.s===k).length/n*100;return `<span style="width:${w}%;background:var(${c})" title="${stName(k)}"></span>`}).join("");
-  const done=items.filter(i=>i.s==="done").length;
-  $("#legend").innerHTML=ST.map(([k,l,c])=>`<span><i style="background:var(${c})"></i>${l} ${items.filter(i=>i.s===k).length}</span>`).join("")+`<span style="margin-left:auto">${Math.round(done/n*100)} % terminé</span>`;
+/* ---- status change + automations ---- */
+function setStatus(it,s,by){
+  if(it.s===s) return; it.s=s;
+  S.autos.filter(a=>a.on===s).forEach(a=>{
+    S.notifs.unshift({txt:`Automatisation : « ${it.name} » est passée à ${stName(s)}. ${a.notify} est prévenu(e).`,at:nowStamp(),read:false});
+    toast(`Automatisation déclenchée : ${a.notify} est prévenu(e)`);
+  });
 }
+const autoLabel=a=>`Quand une tâche passe à ${stName(a.on)}, prévenir ${a.notify}`;
+
+/* ---------------- Rendering ---------------- */
+function renderProgress(){
+  const its=S.items,n=its.length||1;
+  $("#bar").innerHTML=ST.map(([k,,c])=>`<span style="width:${its.filter(i=>i.s===k).length/n*100}%;background:var(${c})" title="${stName(k)}"></span>`).join("");
+  const done=its.filter(i=>i.s==="done").length;
+  $("#legend").innerHTML=ST.map(([k,l,c])=>`<span><i style="background:var(${c})"></i>${l} ${its.filter(i=>i.s===k).length}</span>`).join("")+`<span style="margin-left:auto">${Math.round(done/n*100)} % terminé</span>`;
+}
+function renderAutos(){
+  $("#autos").innerHTML=`<span>Automatisations</span><a class="fb" data-f="autom" href="#decisions"><i></i></a>`+
+    (S.autos.length?S.autos.map(a=>`<span class="rule">${esc(autoLabel(a))}<button data-rm="${a.id}" aria-label="Supprimer l'automatisation">✕</button></span>`).join(""):`<span>aucune. Demandez à l'assistant d'en créer une.</span>`);
+}
+function renderBell(){
+  const n=S.notifs.filter(x=>!x.read).length; const d=$("#bellcount"); d.hidden=!n; d.textContent=n;
+  $("#notiflist").innerHTML=S.notifs.length?S.notifs.slice(0,20).map(x=>`<li>${esc(x.txt)}<small>${x.at}${x.read?"":" · nouveau"}</small></li>`).join(""):"<li>Aucune notification.</li>";
+}
+const subCount=i=>i.subs.length?`${i.subs.filter(x=>x.d).length}/${i.subs.length}`:"—";
 function renderTable(){
-  $("#tableview").innerHTML=groups.map(g=>{
-    const rows=items.filter(i=>i.g===g.id);
-    return `<div class="group"><h3><span class="sw" style="background:${g.color}"></span>${esc(g.name)}<span class="cnt">${rows.length} tâche${rows.length>1?"s":""}</span>${g.id==="g1"?'<a class="fb" data-f="boards" href="#decisions"><i></i></a>':""}</h3>
-    <div class="tscroll"><table><thead><tr><th>Tâche</th><th>Statut <a class="fb" data-f="columns" href="#decisions" style="margin-left:4px"><i></i></a></th><th>Responsable</th><th>Échéance</th><th>Priorité</th><th>Sous-tâches</th><th></th></tr></thead><tbody>
+  const vis=visible(); const filtering=q||fwho;
+  const html=S.groups.map(g=>{
+    const rows=vis.filter(i=>i.g===g.id);
+    if(filtering&&!rows.length) return "";
+    return `<div class="group" data-g="${g.id}"><h3><button class="fold" data-act="fold" aria-label="${g.fold?"Déplier":"Replier"} le groupe" aria-expanded="${!g.fold}">${g.fold?"▸":"▾"}</button><span class="sw" style="background:${g.color}"></span><input class="gname" value="${esc(g.name)}" aria-label="Nom du groupe"><span class="cnt">${rows.length} tâche${rows.length>1?"s":""}</span>${g.id==="g1"?'<a class="fb" data-f="boards" href="#decisions"><i></i></a>':""}</h3>
+    ${g.fold?"":`<div class="tscroll"><table><thead><tr><th>Tâche</th><th>Statut <a class="fb" data-f="columns" href="#decisions" style="margin-left:4px"><i></i></a></th><th>Responsable</th><th>Échéance</th><th>Priorité</th><th>Sous-tâches</th><th>Fil</th><th></th></tr></thead><tbody>
     ${rows.map(i=>`<tr data-id="${i.id}">
-      <td class="name"><input value="${esc(i.name)}" data-k="name" aria-label="Nom de la tâche"></td>
+      <td class="name"><input value="${esc(i.name)}" data-k="name" aria-label="Nom de la tâche"><button class="open" data-act="open">Ouvrir</button></td>
       <td class="c"><button class="status" data-s="${i.s}" data-act="cycle" title="Cliquer pour changer">${stName(i.s)}</button></td>
-      <td class="c"><select class="who" data-k="who" aria-label="Responsable">${PEOPLE.map(p=>`<option${p===i.who?" selected":""}>${p}</option>`).join("")}</select></td>
+      <td class="c"><select class="who" data-k="who" aria-label="Responsable">${["—",...PEOPLE].map(p=>`<option${p===i.who?" selected":""}>${p}</option>`).join("")}</select></td>
       <td class="c"><input type="date" class="date" value="${i.due}" data-k="due" aria-label="Échéance"></td>
       <td class="c"><select class="prio" data-k="p" aria-label="Priorité">${["Haute","Moyenne","Basse"].map(p=>`<option${p===i.p?" selected":""}>${p}</option>`).join("")}</select></td>
-      <td class="c"><span class="sub">${i.sub||"—"}</span></td>
+      <td class="c"><span class="sub"><button data-act="open">${subCount(i)}</button></span></td>
+      <td class="c"><span class="ccount">${i.com.length?i.com.length+" msg":"—"}</span></td>
       <td class="c"><button class="del" data-act="del" aria-label="Supprimer la tâche">✕</button></td></tr>`).join("")}
     </tbody></table>
-    <form class="addrow" data-g="${g.id}"><input placeholder="+ Ajouter une tâche" aria-label="Nouvelle tâche dans ${esc(g.name)}"></form></div></div>`;
+    <form class="addrow" data-g="${g.id}"><input placeholder="+ Ajouter une tâche" aria-label="Nouvelle tâche dans ${esc(g.name)}"></form></div>`}</div>`;
   }).join("");
+  $("#tableview").innerHTML=html||`<div class="empty">Aucune tâche ne correspond à ce filtre.</div>`;
 }
 function renderKanban(){
+  const vis=visible();
   $("#kanbanview").innerHTML=`<div class="kanban">${ST.map(([k,l,c])=>{
-    const cards=items.filter(i=>i.s===k);
+    const cards=vis.filter(i=>i.s===k);
     return `<div class="kcol" data-s="${k}" style="--c:var(${c})"><h4><b>${l}</b><span>${cards.length}</span></h4>
-    ${cards.map(i=>`<div class="card" draggable="true" data-id="${i.id}" tabindex="0" title="Glisser, ou Entrée pour passer au statut suivant"><div>${esc(i.name)}</div>
-      <div class="meta"><span>${i.who}</span><span>${i.due.slice(8)}/${i.due.slice(5,7)}</span></div><div class="gtag">${esc((groups.find(g=>g.id===i.g)||{}).name||"")}</div></div>`).join("")}</div>`}).join("")}</div>`;
+    ${cards.map(i=>`<div class="card" draggable="true" data-id="${i.id}" tabindex="0" title="Glisser pour changer de statut, Entrée pour ouvrir"><div>${esc(i.name)}</div>
+      <div class="meta"><span>${i.who}</span><span>${fmt(i.due)}</span></div>
+      <div class="badges">${i.subs.length?`<span>☑ ${subCount(i)}</span>`:""}${i.com.length?`<span>💬 ${i.com.length}</span>`:""}<span style="margin-left:auto">${esc((S.groups.find(g=>g.id===i.g)||{}).name||"")}</span></div></div>`).join("")}</div>`}).join("")}</div>`;
 }
-function render(){ renderProgress(); view==="table"?renderTable():renderKanban(); paintBadges(); }
-function cycle(i){ const idx=ST.findIndex(x=>x[0]===i.s); i.s=ST[(idx+1)%ST.length][0]; }
+function renderCal(){
+  const [y,m]=S.calMonth.split("-").map(Number);
+  const first=new Date(Date.UTC(y,m-1,1)); const startDow=(first.getUTCDay()+6)%7; // lundi=0
+  const start=new Date(Date.UTC(y,m-1,1-startDow));
+  const title=first.toLocaleDateString("fr-FR",{month:"long",year:"numeric",timeZone:"UTC"});
+  const vis=visible(); let cells="";
+  for(let k=0;k<42;k++){
+    const d=new Date(start.getTime()+k*864e5); const iso=d.toISOString().slice(0,10);
+    if(k>=35&&d.getUTCMonth()!==m-1) break;
+    const evs=vis.filter(i=>i.due===iso);
+    cells+=`<div class="day${d.getUTCMonth()!==m-1?" out":""}${iso===TODAY?" today":""}"><span class="num">${d.getUTCDate()}</span>${evs.map(i=>`<button class="ev" data-id="${i.id}" style="background:var(${stVar(i.s)})" title="${esc(i.name)} · ${i.who}">${esc(i.name)}</button>`).join("")}</div>`;
+  }
+  $("#calview").innerHTML=`<div class="cal"><div class="calhead"><button class="btn" data-cal="-1" aria-label="Mois précédent">‹</button><b>${title} <a class="fb" data-f="calendar" href="#decisions"><i></i></a></b><button class="btn" data-cal="1" aria-label="Mois suivant">›</button></div>
+    <div class="calgrid">${["lun.","mar.","mer.","jeu.","ven.","sam.","dim."].map(d=>`<div class="dow">${d}</div>`).join("")}${cells}</div></div>`;
+}
+function render(){
+  save(); renderProgress(); renderAutos(); renderBell();
+  ["table","kanban","cal"].forEach(v=>{$("#vt-"+v).setAttribute("aria-pressed",S.view===v); $("#"+(v==="cal"?"calview":v+"view")).hidden=S.view!==v;});
+  S.view==="table"?renderTable():S.view==="kanban"?renderKanban():renderCal();
+  if(openId) renderDrawer();
+  paintBadges();
+}
+const byId=id=>S.items.find(i=>i.id===id);
+function cycleIt(it){const idx=ST.findIndex(x=>x[0]===it.s); setStatus(it,ST[(idx+1)%ST.length][0]);}
 
+/* ---------------- Board events ---------------- */
 $("#tableview").addEventListener("click",e=>{
   const b=e.target.closest("[data-act]"); if(!b) return;
-  const id=+b.closest("tr").dataset.id, it=items.find(i=>i.id===id);
-  if(b.dataset.act==="cycle"){cycle(it);render();}
-  if(b.dataset.act==="del"){items=items.filter(i=>i.id!==id);render();toast("Tâche supprimée");}
+  if(b.dataset.act==="fold"){const g=S.groups.find(x=>x.id===b.closest(".group").dataset.g); g.fold=!g.fold; render(); return;}
+  const id=+b.closest("tr").dataset.id, it=byId(id);
+  if(b.dataset.act==="cycle"){cycleIt(it);render();}
+  if(b.dataset.act==="open") openDrawer(id);
+  if(b.dataset.act==="del"){const pos=S.items.indexOf(it); S.items.splice(pos,1); render(); toast("Tâche supprimée","Annuler",()=>{S.items.splice(pos,0,it); render();});}
 });
 $("#tableview").addEventListener("change",e=>{
+  if(e.target.classList.contains("gname")){S.groups.find(x=>x.id===e.target.closest(".group").dataset.g).name=e.target.value.trim()||"Sans nom"; save(); return;}
   const k=e.target.dataset.k; if(!k) return;
-  const it=items.find(i=>i.id===+e.target.closest("tr").dataset.id); it[k]=e.target.value; renderProgress();
+  byId(+e.target.closest("tr").dataset.id)[k]=e.target.value; save(); renderProgress();
 });
 $("#tableview").addEventListener("submit",e=>{
-  e.preventDefault(); const inp=e.target.querySelector("input"); const v=inp.value.trim(); if(!v) return;
-  items.push({id:++uid,g:e.target.dataset.g,name:v,s:"todo",who:"—",due:"2026-11-15",p:"Moyenne",sub:""}); render();
-  const f=document.querySelector(`.addrow[data-g="${e.target.dataset.g}"] input`); if(f) f.focus();
+  e.preventDefault(); const v=e.target.querySelector("input").value.trim(); if(!v) return;
+  const g=e.target.dataset.g; S.items.push({id:++S.uid,g,name:v,s:"todo",who:fwho||"—",due:"2026-11-15",p:"Moyenne",subs:[],com:[]}); render();
+  const f=document.querySelector(`.addrow[data-g="${g}"] input`); f&&f.focus();
 });
 let dragId=null;
-$("#kanbanview").addEventListener("dragstart",e=>{const c=e.target.closest(".card"); if(c){dragId=+c.dataset.id; e.dataTransfer.effectAllowed="move";}});
-$("#kanbanview").addEventListener("dragover",e=>{const col=e.target.closest(".kcol"); if(col){e.preventDefault(); document.querySelectorAll(".kcol.over").forEach(x=>x!==col&&x.classList.remove("over")); col.classList.add("over");}});
-$("#kanbanview").addEventListener("drop",e=>{const col=e.target.closest(".kcol"); if(col&&dragId){e.preventDefault(); items.find(i=>i.id===dragId).s=col.dataset.s; dragId=null; render();}});
-$("#kanbanview").addEventListener("dragend",()=>document.querySelectorAll(".kcol.over").forEach(x=>x.classList.remove("over")));
-$("#kanbanview").addEventListener("keydown",e=>{const c=e.target.closest(".card"); if(c&&e.key==="Enter"){const id=+c.dataset.id; cycle(items.find(i=>i.id===id)); render(); const n=document.querySelector(`.card[data-id="${id}"]`); n&&n.focus();}});
-function setView(v){view=v; $("#vt-table").setAttribute("aria-pressed",v==="table"); $("#vt-kanban").setAttribute("aria-pressed",v==="kanban"); $("#tableview").hidden=v!=="table"; $("#kanbanview").hidden=v!=="kanban"; render();}
-$("#vt-table").onclick=()=>setView("table"); $("#vt-kanban").onclick=()=>setView("kanban");
-$("#addgroup").onclick=()=>{const n=groups.length+1; groups.push({id:"g"+(++uid),name:"Nouveau groupe "+n,color:"var(--st-done)"}); setView("table"); toast("Groupe ajouté");};
+const kv=$("#kanbanview");
+kv.addEventListener("dragstart",e=>{const c=e.target.closest(".card"); if(c){dragId=+c.dataset.id; e.dataTransfer.effectAllowed="move";}});
+kv.addEventListener("dragover",e=>{const col=e.target.closest(".kcol"); if(col){e.preventDefault(); document.querySelectorAll(".kcol.over").forEach(x=>x!==col&&x.classList.remove("over")); col.classList.add("over");}});
+kv.addEventListener("drop",e=>{const col=e.target.closest(".kcol"); if(col&&dragId){e.preventDefault(); setStatus(byId(dragId),col.dataset.s); dragId=null; render();}});
+kv.addEventListener("dragend",()=>document.querySelectorAll(".kcol.over").forEach(x=>x.classList.remove("over")));
+kv.addEventListener("click",e=>{const c=e.target.closest(".card"); if(c) openDrawer(+c.dataset.id);});
+kv.addEventListener("keydown",e=>{const c=e.target.closest(".card"); if(c&&e.key==="Enter") openDrawer(+c.dataset.id);});
+$("#calview").addEventListener("click",e=>{
+  const n=e.target.closest("[data-cal]"); if(n){const [y,m]=S.calMonth.split("-").map(Number); const d=new Date(Date.UTC(y,m-1+ +n.dataset.cal,1)); S.calMonth=d.toISOString().slice(0,7); render(); return;}
+  const ev=e.target.closest(".ev"); if(ev) openDrawer(+ev.dataset.id);
+});
+document.querySelector(".seg").addEventListener("click",e=>{const b=e.target.closest("[data-v]"); if(b){S.view=b.dataset.v; render();}});
+$("#addgroup").onclick=()=>{S.groups.push({id:"g"+(++S.uid),name:"Nouveau groupe",color:"var(--st-done)"}); S.view="table"; render(); const ins=document.querySelectorAll(".gname"); const l=ins[ins.length-1]; if(l){l.focus(); l.select();}};
 $("#showfb").onchange=e=>document.body.classList.toggle("hide-fb",!e.target.checked);
+$("#q").addEventListener("input",e=>{q=e.target.value; render();});
+$("#fwho").innerHTML+=PEOPLE.map(p=>`<option>${p}</option>`).join("");
+$("#fwho").onchange=e=>{fwho=e.target.value; render();};
+$("#autos").addEventListener("click",e=>{const b=e.target.closest("[data-rm]"); if(b){const i=S.autos.findIndex(a=>a.id===b.dataset.rm); const a=S.autos.splice(i,1)[0]; render(); toast("Automatisation supprimée","Annuler",()=>{S.autos.splice(i,0,a); render();});}});
+$("#bell").onclick=e=>{e.stopPropagation(); const p=$("#notifpop"); p.hidden=!p.hidden; $("#bell").setAttribute("aria-expanded",!p.hidden);};
+$("#readall").onclick=()=>{S.notifs.forEach(x=>x.read=true); render();};
+document.addEventListener("click",e=>{if(!e.target.closest("#notifpop")&&!e.target.closest("#bell")){$("#notifpop").hidden=true; $("#bell").setAttribute("aria-expanded","false");}});
+let resetArmed=false;
+$("#resetdemo").onclick=()=>{ if(!resetArmed){resetArmed=true; $("#resetdemo").textContent="Confirmer la réinitialisation"; setTimeout(()=>{resetArmed=false; $("#resetdemo").textContent="Réinitialiser la démo";},3000); return;}
+  resetArmed=false; $("#resetdemo").textContent="Réinitialiser la démo"; S=demo(); closeDrawer(); render(); $("#log").innerHTML=""; greet(); toast("Démo réinitialisée");};
+
+/* ---------------- Drawer (détail de tâche) ---------------- */
+let openId=null,lastFocus=null;
+function openDrawer(id){openId=id; lastFocus=document.activeElement; $("#scrim").hidden=false; $("#drawer").hidden=false; renderDrawer(); const c=$("#drawer .dh input"); c&&c.focus();}
+function closeDrawer(){openId=null; $("#scrim").hidden=true; $("#drawer").hidden=true; if(lastFocus&&document.contains(lastFocus)) lastFocus.focus();}
+const hl=t=>esc(t).replace(/@(Zaki|Sami|Léa|Inès)/g,'<span class="mention">@$1</span>');
+function aiThread(i){
+  if(i.com.length<2) return "";
+  const who=[...new Set(i.com.map(c=>c.who))].join(", ");
+  const ask=i.com.find(c=>/\?/.test(c.txt));
+  return `<div class="aisum"><b>Résumé IA</b> · ${i.com.length} messages de ${esc(who)}. ${ask?`Question en attente de ${esc(ask.who)} : « ${esc(ask.txt.replace(/@\S+\s?/g,"").slice(0,90))} ».`:"Pas de question en attente."}</div>`;
+}
+function renderDrawer(){
+  const i=byId(openId); if(!i){closeDrawer(); return;}
+  $("#drawer").innerHTML=`<div class="dh"><input id="d-name" value="${esc(i.name)}" aria-label="Nom de la tâche"><button class="btn" id="d-close">Fermer</button></div>
+  <div class="body">
+    <div class="props">
+      <span>Statut</span><select id="d-s">${ST.map(([k,l])=>`<option value="${k}"${k===i.s?" selected":""}>${l}</option>`).join("")}</select>
+      <span>Responsable</span><select id="d-who">${["—",...PEOPLE].map(p=>`<option${p===i.who?" selected":""}>${p}</option>`).join("")}</select>
+      <span>Échéance</span><input type="date" id="d-due" value="${i.due}">
+      <span>Groupe</span><select id="d-g">${S.groups.map(g=>`<option value="${g.id}"${g.id===i.g?" selected":""}>${esc(g.name)}</option>`).join("")}</select>
+    </div>
+    <section><h4>Sous-tâches <span class="ccount" style="padding:0">${subCount(i)}</span><a class="fb" data-f="subitems" href="#decisions"><i></i></a></h4>
+      <ul class="checklist">${i.subs.map((s,k)=>`<li class="${s.d?"d":""}"><input type="checkbox" id="sub-${k}" data-sub="${k}"${s.d?" checked":""}><label for="sub-${k}">${esc(s.t)}</label><button data-rmsub="${k}" aria-label="Retirer">✕</button></li>`).join("")||'<li style="color:var(--muted)">Aucune sous-tâche.</li>'}</ul>
+      <form class="inline" id="d-addsub"><input id="d-subtxt" placeholder="Ajouter une sous-tâche" aria-label="Nouvelle sous-tâche"><button class="btn">Ajouter</button></form>
+    </section>
+    <section><h4>Fil de discussion <a class="fb" data-f="updates" href="#decisions"><i></i></a></h4>
+      <div class="comments">${aiThread(i)}${i.com.map(c=>`<div class="com"><span class="av">${c.who[0]}</span><div class="txt"><small>${esc(c.who)} · ${c.at}</small>${hl(c.txt)}</div></div>`).join("")||'<p style="color:var(--muted);margin:0;font-size:13px">Pas encore de message. Utilisez @Prénom pour mentionner quelqu\'un.</p>'}</div>
+      <form class="inline" id="d-addcom"><input id="d-comtxt" placeholder="Écrire en tant que Zaki… (@Sami pour mentionner)" aria-label="Nouveau message"><button class="btn primary">Envoyer</button></form>
+    </section>
+  </div>`;
+  paintBadges();
+}
+const dr=$("#drawer");
+dr.addEventListener("click",e=>{
+  if(e.target.id==="d-close") return closeDrawer();
+  const r=e.target.closest("[data-rmsub]"); if(r){byId(openId).subs.splice(+r.dataset.rmsub,1); render();}
+});
+dr.addEventListener("change",e=>{
+  const i=byId(openId); const t=e.target;
+  if(t.id==="d-name") i.name=t.value.trim()||i.name;
+  else if(t.id==="d-s") setStatus(i,t.value);
+  else if(t.id==="d-who") i.who=t.value;
+  else if(t.id==="d-due") i.due=t.value;
+  else if(t.id==="d-g") i.g=t.value;
+  else if(t.dataset.sub!=null){i.subs[+t.dataset.sub].d=t.checked; if(i.subs.length&&i.subs.every(s=>s.d)&&i.s!=="done"){setStatus(i,"done"); toast("Toutes les sous-tâches sont faites : tâche terminée");}}
+  else return;
+  const f=t.id; render(); const n=f&&document.getElementById(f); n&&n.focus();
+});
+dr.addEventListener("submit",e=>{
+  e.preventDefault(); const i=byId(openId);
+  if(e.target.id==="d-addsub"){const v=$("#d-subtxt").value.trim(); if(v){i.subs.push(sub(v)); render(); $("#d-subtxt").focus();}}
+  if(e.target.id==="d-addcom"){const v=$("#d-comtxt").value.trim(); if(v){i.com.push({who:"Zaki",txt:v,at:nowStamp()});
+    (v.match(/@(Sami|Léa|Inès)/g)||[]).forEach(m=>S.notifs.unshift({txt:`${m.slice(1)} a été mentionné(e) par Zaki dans « ${i.name} ».`,at:nowStamp(),read:false}));
+    render(); $("#d-comtxt").focus();}}
+});
+$("#scrim").onclick=closeDrawer;
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&openId) closeDrawer();});
 
 /* ---------------- Assistant (simulation) ---------------- */
-const SUGG=["Résume le projet","Qu'est-ce qui bloque ?","Ajoute « Rédiger la FAQ » pour Sami","Marque le formulaire de contact en cours","Qui est le plus chargé ?","Crée un projet d'événement client"];
+const SUGG=["Résume le projet","Qu'est-ce qui bloque ?","Qui est le plus chargé ?","Ajoute « Rédiger la FAQ » pour Sami","Marque le formulaire de contact en cours","Quand une tâche est terminée, préviens Léa","Crée un projet d'événement client"];
 $("#sugg").innerHTML=SUGG.map(s=>`<button type="button">${esc(s)}</button>`).join("");
 $("#sugg").onclick=e=>{const b=e.target.closest("button"); if(b) ask(b.textContent);};
 function say(t,who){const d=document.createElement("div"); d.className="msg "+who; d.textContent=t; $("#log").appendChild(d); $("#log").scrollTop=1e6;}
-say("Bonjour Zaki. Je connais ce projet : 8 tâches et 1 blocage. Demandez-moi un résumé, d'ajouter une tâche, de changer un statut ou de créer un projet complet.","a");
+function greet(){const b=S.items.filter(i=>i.s==="block").length; say(`Bonjour Zaki. Ce projet compte ${S.items.length} tâches${b?` dont ${b} bloquée${b>1?"s":""}`:""}. Je peux résumer, ajouter une tâche, changer un statut, créer une automatisation ou générer un projet complet.`,"a");}
+greet();
 $("#askform").onsubmit=e=>{e.preventDefault(); const v=$("#ask").value.trim(); if(v){ask(v); $("#ask").value="";}};
-function norm(s){return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");}
-function findItem(q){const w=norm(q).split(/\s+/).filter(x=>x.length>3); let best=null,sc=0; items.forEach(i=>{const n=norm(i.name); const s=w.filter(x=>n.includes(x)).length; if(s>sc){sc=s;best=i;}}); return best;}
+function findItem(t){const w=norm(t).split(/\s+/).filter(x=>x.length>3); let best=null,sc=0; S.items.forEach(i=>{const n=norm(i.name); const s=w.filter(x=>n.includes(x)).length; if(s>sc){sc=s;best=i;}}); return best;}
+const stFrom=n=>/en cours/.test(n)?"doing":/termin|fini/.test(n)?"done":/bloqu/.test(n)?"block":/a faire/.test(n)?"todo":null;
 function ask(t){
   say(t,"u"); const n=norm(t); let r;
-  if(/resum|point|etat/.test(n)){
-    const c=s=>items.filter(i=>i.s===s).length;
-    const late=items.filter(i=>i.s!=="done"&&i.due<="2026-11-05").map(i=>"• "+i.name+" ("+i.who+", "+i.due.slice(8)+"/"+i.due.slice(5,7)+")");
-    r=`Sur ${items.length} tâches : ${c("done")} terminée(s), ${c("doing")} en cours, ${c("block")} bloquée(s), ${c("todo")} à faire.\nÉchéances proches :\n${late.join("\n")||"aucune"}`;
+  const person=PEOPLE.find(p=>n.includes(norm(p)));
+  if(/^(quand|si|des que|lorsqu)/.test(n)&&stFrom(n)){
+    const on=stFrom(n), who=person||"Zaki";
+    S.autos.push({id:"a"+(++S.uid),on,notify:who}); render();
+    r=`Automatisation créée : « ${autoLabel({on,notify:who})} ». Elle apparaît au-dessus du board et vous pouvez la supprimer d'un clic.`;
+  } else if(/resum|point|etat/.test(n)){
+    const c=s=>S.items.filter(i=>i.s===s).length;
+    const late=S.items.filter(i=>i.s!=="done"&&i.due&&i.due<="2026-11-05").map(i=>`• ${i.name} (${i.who}, ${fmt(i.due)})`);
+    r=`Sur ${S.items.length} tâches : ${c("done")} terminée(s), ${c("doing")} en cours, ${c("block")} bloquée(s), ${c("todo")} à faire.\nÉchéances d'ici au 05/11 :\n${late.join("\n")||"aucune"}`;
   } else if(/bloqu/.test(n)&&!/marqu|passe|met/.test(n)){
-    const b=items.filter(i=>i.s==="block"); r=b.length?"Bloqué :\n"+b.map(i=>"• "+i.name+" ("+i.who+")").join("\n")+"\nJe propose de relancer "+b[0].who+" et de prévoir une solution de secours.":"Rien n'est bloqué.";
+    const b=S.items.filter(i=>i.s==="block");
+    r=b.length?"Bloqué :\n"+b.map(i=>{const last=i.com[i.com.length-1]; return `• ${i.name} (${i.who})${last?`\n  Dernier message : « ${last.txt} »`:""}`;}).join("\n")+`\nJe propose d'ouvrir la tâche pour répondre dans son fil.`:"Rien n'est bloqué.";
+    if(b.length) setTimeout(()=>openDrawer(b[0].id),600);
   } else if(/charge|occupe|surcharge/.test(n)){
-    const m={}; items.filter(i=>i.s!=="done").forEach(i=>m[i.who]=(m[i.who]||0)+1);
-    const s=Object.entries(m).sort((a,b)=>b[1]-a[1]); r="Tâches ouvertes par personne :\n"+s.map(([p,k])=>"• "+p+" : "+k).join("\n")+(s[0]?"\n"+s[0][0]+" est le plus chargé.":"");
+    const m={}; S.items.filter(i=>i.s!=="done").forEach(i=>m[i.who]=(m[i.who]||0)+1);
+    const s=Object.entries(m).sort((a,b)=>b[1]-a[1]); r="Tâches ouvertes par personne :\n"+s.map(([p,k])=>`• ${p} : ${k}`).join("\n")+(s[0]?`\n${s[0][0]} a le plus de tâches ouvertes.`:"");
   } else if(/^ajoute|^cree une tache|^nouvelle tache/.test(n)){
-    const m=t.match(/[«"“](.+?)[»"”]/); const name=m?m[1].trim():t.replace(/^\S+\s+/,"");
-    const who=PEOPLE.find(p=>p!=="—"&&n.includes(norm(p)))||"—";
-    items.push({id:++uid,g:"g1",name,s:"todo",who,due:"2026-11-07",p:"Moyenne",sub:""}); render();
-    r=`C'est ajouté dans « Cette semaine » : « ${name} », confié à ${who}, pour le 07/11.`;
-  } else if(/marqu|passe|met/.test(n)&&/(en cours|termin|fini|bloqu|a faire)/.test(n)){
+    const m=t.match(/[«"“](.+?)[»"”]/); const name=(m?m[1]:t.replace(/^\S+\s+/,"")).trim();
+    const who=person||"—";
+    S.items.push({id:++S.uid,g:S.groups[0].id,name,s:"todo",who,due:"2026-11-07",p:"Moyenne",subs:[],com:[]}); render();
+    r=`C'est ajouté dans « ${S.groups[0].name} » : « ${name} », confié à ${who}, pour le 07/11.`;
+  } else if(/marqu|passe|met/.test(n)&&stFrom(n)){
     const it=findItem(t.replace(/marque|passe|mets?|en cours|termin\w*|fini\w*|bloqu\w*|à faire/gi,""));
-    const s=/en cours/.test(n)?"doing":/termin|fini/.test(n)?"done":/bloqu/.test(n)?"block":"todo";
-    if(it){it.s=s; render(); r=`« ${it.name} » est maintenant au statut ${stName(s)}.`;} else r="Je n'ai pas trouvé cette tâche. Pouvez-vous la nommer autrement ?";
+    const s=stFrom(n);
+    if(it){setStatus(it,s); render(); r=`« ${it.name} » est maintenant au statut ${stName(s)}.`;} else r="Je n'ai pas trouvé cette tâche. Pouvez-vous la nommer autrement ?";
   } else if(/projet|evenement|lancement/.test(n)&&/cree|genere|prepare|nouveau/.test(n)){
-    const gid="g"+(++uid); groups.push({id:gid,name:"Projet généré : événement client",color:"var(--st-done)"});
-    [["Fixer la date et le budget","Zaki","2026-11-09"],["Réserver le lieu","Inès","2026-11-13"],["Envoyer les invitations","Léa","2026-11-16"],["Préparer la présentation","Zaki","2026-11-20"],["Relancer les invités","Sami","2026-11-23"],["Envoyer le bilan","Léa","2026-11-30"]]
-      .forEach(([nm,w,d])=>items.push({id:++uid,g:gid,name:nm,s:"todo",who:w,due:d,p:"Moyenne",sub:""}));
-    setView("table"); r="J'ai créé un groupe de 6 tâches ordonnées avec responsables et dates. Dans la vraie version, je poserais d'abord 2 ou 3 questions (date, budget, nombre d'invités).";
-  } else r="Dans ce prototype, je comprends : résumé, blocages, charge, « ajoute « … » pour X », « marque … en cours / terminé », « crée un projet d'événement ». La vraie version utilisera Claude et comprendra tout.";
+    const gid="g"+(++S.uid); S.groups.push({id:gid,name:"Projet généré : événement client",color:"var(--st-done)"});
+    [["Fixer la date et le budget","Zaki","2026-11-09",["Date","Budget","Validation direction"]],["Réserver le lieu","Inès","2026-11-13",["3 devis","Visite"]],["Envoyer les invitations","Léa","2026-11-16",[]],["Préparer la présentation","Zaki","2026-11-20",[]],["Relancer les invités","Sami","2026-11-23",[]],["Envoyer le bilan","Léa","2026-11-30",[]]]
+      .forEach(([nm,w,d,ss])=>S.items.push({id:++S.uid,g:gid,name:nm,s:"todo",who:w,due:d,p:"Moyenne",subs:ss.map(x=>sub(x)),com:[]}));
+    S.view="table"; render();
+    r="J'ai créé un groupe de 6 tâches ordonnées, avec responsables, dates et sous-tâches. Passez en vue Calendrier pour voir l'enchaînement. Dans la vraie version, je poserais d'abord 2 ou 3 questions (date, budget, nombre d'invités).";
+  } else r="Dans ce prototype, je comprends : résumé, blocages, charge, « ajoute « … » pour X », « marque … en cours / terminé », « quand une tâche est bloquée, préviens X » et « crée un projet d'événement ». La vraie version utilisera Claude et comprendra tout.";
   setTimeout(()=>say(r,"a"),250);
 }
 
@@ -419,9 +653,9 @@ function renderDecisions(){
   paintBadges();
 }
 $("#dsum").onclick=e=>{const b=e.target.closest("[data-filter]"); if(b){filter=b.dataset.filter; renderDecisions();}};
-$("#cats").addEventListener("click",e=>{const b=e.target.closest(".dseg button"); if(!b) return; dec[b.dataset.f].v=b.dataset.v; save(); renderDecisions();});
-$("#cats").addEventListener("input",e=>{const id=e.target.dataset.note; if(id){dec[id].note=e.target.value; save();}});
-$("#reset").onclick=()=>{FEATURES.forEach(f=>dec[f.id]={v:f.rec,note:dec[f.id].note}); save(); renderDecisions(); toast("Recommandations rétablies, notes conservées");};
+$("#cats").addEventListener("click",e=>{const b=e.target.closest(".dseg button"); if(!b) return; dec[b.dataset.f].v=b.dataset.v; saveDec(); renderDecisions();});
+$("#cats").addEventListener("input",e=>{const id=e.target.dataset.note; if(id){dec[id].note=e.target.value; saveDec();}});
+$("#reset").onclick=()=>{FEATURES.forEach(f=>dec[f.id]={v:f.rec,note:dec[f.id].note}); saveDec(); renderDecisions(); toast("Recommandations rétablies, notes conservées");};
 function summary(){
   let out="# Décisions — Assistant Projet (copie de Monday.com)\n";
   ["keep","modify","remove"].forEach(v=>{
@@ -436,16 +670,16 @@ $("#copy").onclick=()=>{
   try{ navigator.clipboard.writeText(t).then(()=>{fb.hidden=true; toast("Synthèse copiée. Collez-la dans la conversation.");},fallback);}catch(e){fallback();}
 };
 
-/* badges */
-function paintBadges(){document.querySelectorAll(".fb[data-f]").forEach(b=>{const d=dec[b.dataset.f]; if(!d) return; const f=FEATURES.find(x=>x.id===b.dataset.f); b.dataset.d=d.v; b.innerHTML=`<i></i>${LBL[d.v]}`; b.title=f.name+" : "+LBL[d.v]+" (voir la décision)"; b.onclick=ev=>{ev.preventDefault(); filter="all"; location.hash="decisions"; setTimeout(()=>{const el=document.getElementById("f-"+f.id); if(el){el.scrollIntoView({block:"center"}); const btn=el.querySelector('[aria-pressed="true"]'); btn&&btn.focus();}},30);};});}
+function paintBadges(){document.querySelectorAll(".fb[data-f]").forEach(b=>{const d=dec[b.dataset.f]; if(!d) return; const f=FEATURES.find(x=>x.id===b.dataset.f); b.dataset.d=d.v; b.innerHTML=`<i></i>${LBL[d.v]}`; b.title=f.name+" : "+LBL[d.v]+" (voir la décision)"; b.onclick=ev=>{ev.preventDefault(); if(openId) closeDrawer(); filter="all"; location.hash="decisions"; setTimeout(()=>{const el=document.getElementById("f-"+f.id); if(el){el.scrollIntoView({block:"center"}); const btn=el.querySelector('[aria-pressed="true"]'); btn&&btn.focus();}},30);};});}
 
-let tt; function toast(m){const t=$("#toast"); t.textContent=m; t.hidden=false; clearTimeout(tt); tt=setTimeout(()=>t.hidden=true,2600);}
+let tt,tact=null;
+function toast(m,label,fn){$("#toastmsg").textContent=m; const a=$("#toastact"); a.hidden=!label; a.textContent=label||""; tact=fn||null; $("#toast").hidden=false; clearTimeout(tt); tt=setTimeout(()=>$("#toast").hidden=true,label?5000:2600);}
+$("#toastact").onclick=()=>{if(tact){tact(); tact=null;} $("#toast").hidden=true;};
 
-/* routing */
 function route(){const r=location.hash==="#decisions"?"decisions":"prototype";
   $("#v-prototype").hidden=r!=="prototype"; $("#v-decisions").hidden=r!=="decisions";
   $("#tab-prototype").toggleAttribute("aria-current",r==="prototype"); $("#tab-decisions").toggleAttribute("aria-current",r==="decisions");
-  if(r==="prototype") $("#tab-prototype").setAttribute("aria-current","page"); else $("#tab-decisions").setAttribute("aria-current","page");
+  $(r==="prototype"?"#tab-prototype":"#tab-decisions").setAttribute("aria-current","page");
   if(r==="decisions") renderDecisions(); else render();}
 window.addEventListener("hashchange",route);
 renderDecisions(); route();
