@@ -2,7 +2,7 @@
 
 Outil de PMO IA-first : l'assistant reçoit le contexte des projets, répartit le travail, suit les tâches, demande pourquoi elles sont en retard et apprend de ces explications. Voir `docs/vision.md`.
 
-Autres documents : `docs/assistant-ia.md` (fonctionnement détaillé de l'assistant IA), `docs/deploiement-vps.md` (mise en production), `docs/analyse-monday-com.md` (analyse de départ), `prototype/index.html` (maquette interactive).
+Documentation : voir [`docs/README.md`](docs/README.md) (charte du projet, vision, plan d'exploitation, assistant IA, déploiement).
 
 ## Démarrer en local
 
