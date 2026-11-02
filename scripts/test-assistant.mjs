@@ -19,6 +19,8 @@ const mock = http.createServer((req, res) => {
     const usage = { input_tokens: 900, output_tokens: 120, cache_read_input_tokens: 1500, cache_creation_input_tokens: 0 };
     const msg = (content, stop_reason) => send(200, { id: "msg_" + seen.length, type: "message", role: "assistant", model: json.model, content, stop_reason, stop_sequence: null, usage });
 
+    if (!json.tools) return msg([{ type: "text", text: "OK" }], "end_turn"); // test de connexion (Paramètres)
+    if (scenario === "echo") return msg([{ type: "text", text: "Bien reçu." }], "end_turn");
     if (json.tools?.[0]?.name === "record_lessons") {
       if (scenario === "nolessons") return msg([{ type: "text", text: "Rien à dire." }], "end_turn");
       const notes = JSON.parse(json.messages[0].content.slice(json.messages[0].content.indexOf("[")));
@@ -224,6 +226,38 @@ try {
   assert.equal((await post("/api/lessons", { projectId: "prj_crm" })).status, 422);
   scenario = "plan";
 
+  // 1 sexies. Paramètres : clé OpenRouter chiffrée, jamais renvoyée ; modèle ; limite ; test de connexion
+  const KEY = "sk-or-v1-abcdefghijklmnop1234";
+  const s0 = await fetch(base + "/api/settings").then((r) => r.json());
+  assert.equal(s0.settings.keySource, "env", "repli sur la clé du serveur");
+  assert.equal(s0.canEdit, true);
+  assert.equal((await put("/api/settings", { key: "mauvaise-cle" })).status, 400);
+  assert.equal((await put("/api/settings", { model: "pas un modèle" })).status, 400);
+  assert.equal((await put("/api/settings", { dailyLimit: 0 })).status, 400);
+  const s1 = await fetch(base + "/api/settings", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ key: KEY, model: "anthropic/claude-sonnet-5.5", dailyLimit: 50 }) });
+  const s1text = await s1.text();
+  assert.equal(s1.status, 200);
+  assert.ok(!s1text.includes(KEY) && !s1text.includes("abcdefghijklmnop"), "la clé n'est jamais renvoyée");
+  const s1d = JSON.parse(s1text).settings;
+  assert.deepEqual([s1d.keySource, s1d.keyLast4, s1d.model, s1d.dailyLimit], ["settings", "1234", "anthropic/claude-sonnet-5.5", 50]);
+  assert.ok(!(await fetch(base + "/api/settings").then((r) => r.text())).includes(KEY));
+  scenario = "echo";
+  const viaKey = await ask("Bonjour");
+  assert.equal(viaKey.status, 200);
+  assert.equal(seen.at(-1).auth, `Bearer ${KEY}`, "l'assistant utilise la clé enregistrée");
+  assert.equal(seen.at(-1).body.model, "anthropic/claude-sonnet-5.5", "et le modèle choisi");
+  const t1 = await post("/api/settings/test", {});
+  assert.equal(t1.data.ok, true, JSON.stringify(t1.data));
+  assert.equal(t1.data.model, "anthropic/claude-sonnet-5.5");
+  const t2 = await post("/api/settings/test", { key: "sk-or-v1-autre-cle-a-tester-0000", model: "anthropic/claude-haiku-5.5" });
+  assert.equal(t2.data.ok, true);
+  assert.equal(seen.at(-1).auth, "Bearer sk-or-v1-autre-cle-a-tester-0000", "le test utilise la clé saisie, avant enregistrement");
+  assert.equal((await fetch(base + "/api/settings").then((r) => r.json())).settings.keyLast4, "1234", "tester n'enregistre rien");
+  await put("/api/settings", { key: null, model: "anthropic/claude-opus-5.5" });
+  await ask("Bonjour");
+  assert.equal(seen.at(-1).auth, "Bearer sk-or-test", "clé supprimée : repli sur la clé du serveur");
+  scenario = "plan";
+
   // 2. Refus du filtre de sécurité
   scenario = "refusal";
   const r2 = await ask("…");
@@ -242,7 +276,7 @@ try {
   const r5 = await fetch(base + "/api/assistant", { method: "POST", body: JSON.stringify({ projectId: "inconnu", message: "x" }) });
   assert.equal(r5.status, 404);
 
-  console.log("OK : 10 scénarios passés (point du jour, nouveau projet, responsable, résolution sur place, notes et leçons, planification avec outils et historique, refus, clé refusée, requête invalide, projet inconnu)");
+  console.log("OK : 11 scénarios passés (point du jour, nouveau projet, responsable, résolution sur place, notes et leçons, paramètres de l'IA, planification avec outils et historique, refus, clé refusée, requête invalide, projet inconnu)");
 } catch (e) {
   console.error(e.message, "\n--- logs app ---\n", logs.slice(-2000));
   process.exitCode = 1;

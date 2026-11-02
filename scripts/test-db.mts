@@ -150,5 +150,14 @@ await repo.saveLessons(db, DEMO_ORG_ID, null, [{ problemType: "dependance_extern
 await repo.saveLessons(db, DEMO_ORG_ID, null, [{ problemType: "sous_estimation", title: "T2", problem: "P", resolution: "R", recommendation: "Rec", weight: 2, sourceTaskIds: ["y"] }]);
 assert.deepEqual((await repo.listLessons(db, DEMO_ORG_ID, null)).map((l) => l.title), ["T2"], "une nouvelle synthèse remplace la précédente");
 
-console.log(`OK (${process.env.DATABASE_URL ? "PostgreSQL" : "PGlite"}) : 13 vérifications de la base passées (point du jour, création de projet, notes et validation, multi-projets, historique, glissement, automatisations, garde-fous, quota)`);
+// 13. Chiffrement de la clé d'IA : aller-retour, et refus d'un texte altéré
+const { encryptSecret, decryptSecret } = await import("../lib/secrets");
+const enc = encryptSecret("sk-or-v1-secret-1234");
+assert.ok(!enc.includes("secret"), "la clé n'apparaît pas en clair");
+assert.equal(decryptSecret(enc), "sk-or-v1-secret-1234");
+assert.notEqual(encryptSecret("sk-or-v1-secret-1234"), enc, "chiffrement non déterministe (IV aléatoire)");
+const parts = enc.split(":"); parts[3] = Buffer.from("altéré").toString("base64");
+assert.throws(() => decryptSecret(parts.join(":")), /déchiffrer/);
+
+console.log(`OK (${process.env.DATABASE_URL ? "PostgreSQL" : "PGlite"}) : 14 vérifications de la base passées (point du jour, création de projet, notes et validation, chiffrement de la clé, multi-projets, historique, glissement, automatisations, garde-fous, quota)`);
 process.exit(0);

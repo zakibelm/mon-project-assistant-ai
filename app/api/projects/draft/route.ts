@@ -2,7 +2,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { MissingKeyError } from "@/lib/ai/client";
+import { MissingKeyError, resolveAi } from "@/lib/ai/client";
+import { SecretError } from "@/lib/secrets";
 import { draftProject, DraftError } from "@/lib/ai/draft";
 import { getDb } from "@/lib/db/client";
 import { countAiRequest, recordAiTokens } from "@/lib/db/repo";
@@ -21,18 +22,21 @@ export async function POST(req: Request) {
 
   const db = await getDb();
   const { orgId } = await currentSession(db);
-  const quota = await countAiRequest(db, orgId, Number(process.env.AI_DAILY_LIMIT || 200));
+  let ai;
+  try { ai = await resolveAi(db, orgId); }
+  catch (e) { return NextResponse.json({ error: (e as Error).message }, { status: e instanceof MissingKeyError ? 400 : 500 }); }
+  const quota = await countAiRequest(db, orgId, ai.dailyLimit);
   if (!quota.ok) return NextResponse.json({ error: `Limite quotidienne atteinte (${quota.limit} demandes).` }, { status: 429 });
 
   try {
     const known = await db.select({ name: members.displayName }).from(members).where(eq(members.orgId, orgId));
-    const { draft, usage } = await draftProject(parsed.data.text, known.map((m) => m.name));
+    const { draft, usage } = await draftProject(ai, parsed.data.text, known.map((m) => m.name));
     await recordAiTokens(db, orgId, usage);
     return NextResponse.json({ draft });
   } catch (e) {
     if (e instanceof DraftError) return NextResponse.json({ error: e.message }, { status: 422 });
-    if (e instanceof MissingKeyError) return NextResponse.json({ error: e.message }, { status: 500 });
-    if (e instanceof Anthropic.AuthenticationError) return NextResponse.json({ error: "Clé OpenRouter refusée : vérifiez OPENROUTER_API_KEY." }, { status: 502 });
+    if (e instanceof MissingKeyError || e instanceof SecretError) return NextResponse.json({ error: e.message }, { status: 500 });
+    if (e instanceof Anthropic.AuthenticationError) return NextResponse.json({ error: "Clé OpenRouter refusée : vérifiez-la dans Paramètres." }, { status: 502 });
     if (e instanceof Anthropic.APIError) {
       console.error("[cadrage] erreur API", e.status, e.message);
       return NextResponse.json({ error: e.status === 402 ? "Crédits OpenRouter insuffisants." : `Le modèle a renvoyé une erreur (${e.status ?? "inconnue"}).` }, { status: 502 });

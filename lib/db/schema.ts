@@ -186,6 +186,17 @@ export const lessons = pgTable("lessons", {
   createdAt: createdAt(),
 }, (t) => [index("lessons_org_idx").on(t.orgId, t.createdAt)]);
 
+/** Paramètres de l'organisation. La clé d'IA est chiffrée (AES-256-GCM) et n'est jamais renvoyée au navigateur. */
+export const orgSettings = pgTable("org_settings", {
+  orgId: text("org_id").primaryKey().references(() => organizations.id, { onDelete: "cascade" }),
+  openrouterKeyEnc: text("openrouter_key_enc"),
+  openrouterKeyLast4: text("openrouter_key_last4"),
+  aiModel: text("ai_model"),
+  aiDailyLimit: integer("ai_daily_limit"),
+  updatedById: text("updated_by_id").references(() => members.id, { onDelete: "set null" }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 /** Usage de l'IA par organisation et par jour (limite quotidienne et suivi des coûts). */
 export const aiUsage = pgTable("ai_usage", {
   orgId: text("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),

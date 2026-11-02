@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { getClient, MODEL } from "./client";
+import type { Ai } from "./client";
 import { boardSnapshot, runTool, TOOLS } from "./tools";
 import type { Db } from "@/lib/db/client";
 import type { Actor } from "@/lib/db/repo";
@@ -35,11 +35,11 @@ export interface AssistantResult {
 }
 
 export async function runAssistant(
-  db: Db, board: Board, user: { name: string; memberId: string | null }, history: ChatTurn[], message: string,
+  db: Db, board: Board, user: { name: string; memberId: string | null }, history: ChatTurn[], message: string, ai: Ai,
 ): Promise<AssistantResult> {
   // Les écritures de l'assistant sont journalisées comme « assistant, pour le compte de l'utilisateur ».
   const actor: Actor = { memberId: user.memberId, kind: "assistant" };
-  const client = getClient();
+  const client = ai.client;
   const today = new Date().toISOString().slice(0, 10);
 
   const messages: Anthropic.MessageParam[] = [
@@ -60,7 +60,7 @@ export async function runAssistant(
 
   for (let step = 0; step < MAX_STEPS; step++) {
     const response = await client.messages.create({
-      model: MODEL(),
+      model: ai.model,
       max_tokens: 16000,
       // Point de cache sur le système : couvre les outils + le système (ordre tools → system → messages).
       system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],

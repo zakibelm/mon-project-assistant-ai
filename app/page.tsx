@@ -4,6 +4,7 @@ import type { Board } from "@/lib/board/types";
 import type { Brief, BriefAction } from "@/lib/brief";
 import type { Msg } from "./components/Chat";
 import Lessons from "./components/Lessons";
+import Settings from "./components/Settings";
 import NewProject from "./components/NewProject";
 import ProjectView from "./components/ProjectView";
 import Today from "./components/Today";
@@ -25,7 +26,7 @@ export default function Home() {
   useEffect(() => { loadBrief(); }, [loadBrief]);
   useEffect(() => {
     if (view === "today") { loadBrief(); return; }
-    if (view === "new" || view === "lessons") return;
+    if (view === "new" || view === "lessons" || view === "settings") return;
     setBoard(null);
     fetch(`/api/projects/${view}`).then((r) => r.json()).then((d) => { setBoard(d.board); setMe(d.me ?? null); setUsage(d.usage); }).catch(() => {});
   }, [view, loadBrief]);
@@ -93,11 +94,14 @@ export default function Home() {
             <button className="new" aria-current={view === "new" ? "page" : undefined} onClick={() => setView("new")}>+ Nouveau projet</button>
           </nav>
           {usage && <span className="usage mono">IA : {usage.requests} demande(s) aujourd&apos;hui</span>}
+          <button className={`gear ${view === "settings" ? "on" : ""}`} aria-current={view === "settings" ? "page" : undefined} onClick={() => setView("settings")}>Paramètres</button>
         </div>
       </header>
       <div className="page">
         {view === "today"
           ? <Today brief={brief} onAct={act} onOpen={setView} onNew={() => setView("new")} onChanged={loadBrief} />
+          : view === "settings"
+          ? <Settings />
           : view === "lessons"
           ? <Lessons projects={brief?.pulse.map((p) => ({ id: p.id, name: p.name })) ?? []} />
           : view === "new"

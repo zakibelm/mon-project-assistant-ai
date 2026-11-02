@@ -9,8 +9,10 @@ git clone https://github.com/zakibelm/mon-project-assistant-ai.git /srv/assistan
 cd /srv/assistant-projet
 cp .env.example .env
 chmod 600 .env
-# Dans .env : OPENROUTER_API_KEY, POSTGRES_PASSWORD (long et aléatoire : openssl rand -base64 32),
+# Dans .env : POSTGRES_PASSWORD et APP_SECRET (longs et aléatoires : openssl rand -base64 32),
 # APP_URL (l'adresse publique), SEED_DEMO=1 pendant la phase de prototype.
+# La clé OpenRouter se saisit ensuite dans l'application (page Paramètres), où elle est chiffrée ;
+# OPENROUTER_API_KEY dans .env reste possible comme clé de secours.
 docker compose up -d --build
 docker compose logs -f app     # attendre « Ready »
 curl -s http://127.0.0.1:3000/api/projects

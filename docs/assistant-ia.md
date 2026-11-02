@@ -97,11 +97,17 @@ Interface (app/page.tsx)
 - **Modèle par défaut :** `anthropic/claude-opus-5.5`. Autres choix : `anthropic/claude-sonnet-5.5`, `anthropic/claude-haiku-5.5`.
 - En-têtes `HTTP-Referer` et `X-Title` : ils identifient l'app dans le tableau de bord OpenRouter.
 
-### Configuration (`.env.local` en local, `.env` sur le VPS)
+### Configuration
+
+La clé OpenRouter, le modèle et la limite quotidienne se règlent dans la **page Paramètres** :
+- la clé y est chiffrée en base (AES-256-GCM, avec `APP_SECRET`) ;
+- `lib/ai/client.ts` (`resolveAi`) lit ces réglages par organisation ;
+- les variables ci-dessous servent de valeurs par défaut et de secours (`.env.local` en local, `.env` sur le VPS).
 
 | Variable | Rôle | Défaut |
 |---|---|---|
-| `OPENROUTER_API_KEY` | Clé OpenRouter (obligatoire) | — |
+| `OPENROUTER_API_KEY` | Clé OpenRouter de secours (si aucune n'est saisie dans Paramètres) | — |
+| `APP_SECRET` | Secret de chiffrement de la clé saisie dans Paramètres (obligatoire en production) | fichier `.data/app-secret` généré en développement |
 | `AI_MODEL` | Identifiant OpenRouter du modèle | `anthropic/claude-opus-5.5` |
 | `AI_BASE_URL` | Point d'entrée de la passerelle | `https://openrouter.ai/api` |
 | `AI_DAILY_LIMIT` | Demandes par organisation et par jour | `200` |

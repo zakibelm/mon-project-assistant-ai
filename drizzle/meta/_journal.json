@@ -15,6 +15,13 @@
       "when": 1793620007614,
       "tag": "0001_notes_evaluations_lessons",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793627951714,
+      "tag": "0002_org_settings",
+      "breakpoints": true
     }
   ]
 }

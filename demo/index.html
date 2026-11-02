@@ -48,7 +48,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .topbar .wrap{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding-block:10px}
 .brand{font-family:var(--f-display);font-weight:700;font-size:18px;letter-spacing:-.01em}
 .brand small{font-family:var(--f-mono);font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-left:6px}
-.nav{display:flex;gap:4px;flex-wrap:wrap}
+.nav{display:flex;gap:4px;flex-wrap:wrap;flex:1;align-items:center}
 .nav button{border:0;background:transparent;padding:6px 12px;border-radius:999px;color:var(--muted);font-weight:500}
 .nav button[aria-current="page"]{background:var(--ink);color:var(--surface)}
 .nav .new{color:var(--accent);font-weight:600}
@@ -163,6 +163,30 @@ td.c-note{max-width:220px}
 .lesson h3{margin:2px 0 4px;font-size:16px}
 .lesson .reco{background:var(--accent-soft);border-radius:6px;padding:6px 8px}
 @media (min-width:981px){.layout{grid-template-columns:minmax(0,1fr) 340px}}
+.gear{margin-left:auto;border:1px solid var(--line) !important;border-radius:999px}
+.nav .gear{margin-left:auto}
+.settings{max-width:760px;margin-top:22px;display:flex;flex-direction:column;gap:14px}
+.settings a{color:var(--accent)}
+.demo-warn{margin:0;background:var(--demo-soft);border:1px solid var(--demo);border-radius:8px;padding:10px 12px;font-size:14px}
+.sgroup{display:flex;flex-direction:column;gap:8px}
+.sgroup h2{margin:0;font-family:var(--f-display);font-size:19px}
+.kline{margin:0;font-size:14px}
+.warn-text{color:var(--st-block);font-weight:500}
+.sfield{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.sfield input{border:1px solid var(--line);border-radius:8px;padding:9px 10px;background:var(--bg);color:var(--ink);font-size:15px;max-width:460px}
+.sfield.inline input{max-width:140px}
+.small{font-size:12px;margin:0}
+.models{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px}
+.mcard{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer;background:var(--surface)}
+.mcard.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.mcard > span{display:flex;flex-direction:column;gap:2px;min-width:0}
+.mcard input[type="radio"]{margin-top:3px;accent-color:var(--accent)}
+.mcard input.mono{border:1px solid var(--line);border-radius:6px;padding:5px 8px;background:var(--bg);color:var(--ink);margin-top:4px;width:100%}
+.settings-actions{display:flex;gap:8px;flex-wrap:wrap}
+.test-result{margin:0;padding:10px 12px;border-radius:8px;font-size:14px}
+.test-result.ok{background:color-mix(in srgb,var(--st-done) 14%,var(--surface));color:var(--ink)}
+.test-result.ko{background:color-mix(in srgb,var(--st-block) 12%,var(--surface));color:var(--st-block)}
+.btn.danger{color:var(--st-block);align-self:flex-start;padding-left:0}
 .empty{background:var(--surface);border:1px dashed var(--line);border-radius:var(--r);padding:24px;text-align:center;color:var(--muted)}
 
 /* vue projet */
@@ -315,7 +339,8 @@ function seed() {
 }
 function seedBase() {
   return {
-    view: "today", handled: [], resolved: {}, open: null, dates: {}, chats: {}, noteOpen: null, lessons: [], synth: false, newStep: "text", draft: null, intake: "",
+    view: "today", handled: [], resolved: {}, open: null, dates: {}, chats: {}, noteOpen: null, lessons: [], synth: false,
+    settings: { keyLast4: null, model: "anthropic/claude-opus-5.5", limit: 200, msg: null, test: null }, newStep: "text", draft: null, intake: "",
     projects: [
       { id: "site", name: "Lancement du site web", example: true,
         description: "Refonte et mise en ligne du site vitrine d'une agence, avec pages services et formulaire de contact.",
@@ -549,7 +574,8 @@ function renderNav() {
     `<button data-go="today" ${S.view === "today" ? 'aria-current="page"' : ""}>Aujourd'hui</button>` +
     S.projects.map((p) => `<button data-go="${p.id}" ${S.view === p.id ? 'aria-current="page"' : ""}><span class="dot" style="background:${STATE[pulse(p).state][1]}"></span>${esc(p.name)}${p.example ? '<span class="ex">exemple</span>' : ""}</button>`).join("") +
     `<button data-go="lessons" ${S.view === "lessons" ? 'aria-current="page"' : ""}>Leçons apprises</button>` +
-    `<button class="new" data-go="new" ${S.view === "new" ? 'aria-current="page"' : ""} id="nav-new">+ Nouveau projet</button>`;
+    `<button class="new" data-go="new" ${S.view === "new" ? 'aria-current="page"' : ""} id="nav-new">+ Nouveau projet</button>` +
+    `<button class="gear ${S.view === "parametres" ? "on" : ""}" data-go="parametres" ${S.view === "parametres" ? 'aria-current="page"' : ""}>Paramètres</button>`;
 }
 
 /* ------------------------------------------------------------ résolution sur place (sans IA) */
@@ -731,6 +757,62 @@ function renderLessons() {
     </section></div></div>`;
 }
 
+/* ------------------------------------------------------------ paramètres (démo : rien n'est envoyé ni conservé) */
+const MODELS = [
+  ["anthropic/claude-opus-5.5", "Claude Opus 5.5", "Recommandé : planification, analyse des retards, leçons"],
+  ["anthropic/claude-sonnet-5.5", "Claude Sonnet 5.5", "Plus rapide et moins cher, pour les demandes courantes"],
+  ["anthropic/claude-haiku-5.5", "Claude Haiku 5.5", "Le moins cher, pour des résumés simples"],
+];
+function renderSettings() {
+  const st = S.settings, pm = S.projects.some((p) => isPM(p, ME));
+  const known = MODELS.some(([id]) => id === st.model);
+  return `<div class="settings" id="settings"><div><h1 class="ltitle">Paramètres</h1>
+      <p class="muted" style="margin:0">Modèle d'IA et clé OpenRouter utilisés par l'assistant, le cadrage des projets et les leçons apprises.</p></div>
+    <p class="demo-warn"><b>Démo :</b> rien n'est envoyé ni conservé ici. N'y collez pas votre vraie clé : saisissez-la dans l'application installée sur votre serveur, où elle est chiffrée.</p>
+    ${pm ? "" : '<p class="msg error" style="align-self:stretch">Lecture seule : seul un chef de projet peut modifier ces paramètres.</p>'}
+    <section class="panel sgroup"><h2>Clé OpenRouter</h2>
+      <p class="kline">${st.keyLast4 ? `Clé enregistrée, <strong>chiffrée</strong>, se termine par <span class="mono">…${esc(st.keyLast4)}</span>` : '<span class="warn-text">Aucune clé : l\'assistant, le cadrage et les leçons apprises sont désactivés.</span>'}</p>
+      <label class="sfield">${st.keyLast4 ? "Remplacer la clé" : "Clé"}<input id="or-key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-or-…" ${pm ? "" : "disabled"}></label>
+      <p class="muted small">Créez une clé sur <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer">openrouter.ai/keys</a>. Dans l'application, elle est chiffrée avant d'être enregistrée et n'est jamais réaffichée : seuls ses 4 derniers caractères le sont.</p>
+      ${st.keyLast4 && pm ? '<button class="btn ghost danger" id="del-key">Supprimer la clé enregistrée</button>' : ""}
+    </section>
+    <section class="panel sgroup"><h2>Modèle</h2><div class="models">
+      ${MODELS.map(([id, label, note]) => `<label class="mcard ${st.model === id ? "on" : ""}"><input type="radio" name="model" value="${id}" ${st.model === id ? "checked" : ""} ${pm ? "" : "disabled"}><span><strong>${label}</strong><span class="muted">${note}</span><span class="mono small">${id}</span></span></label>`).join("")}
+      <label class="mcard ${known ? "" : "on"}"><input type="radio" name="model" value="autre" ${known ? "" : "checked"} ${pm ? "" : "disabled"}><span><strong>Autre modèle OpenRouter</strong><input id="model-custom" class="mono" placeholder="fournisseur/modèle" value="${known ? "" : esc(st.model)}" ${pm ? "" : "disabled"}></span></label>
+    </div></section>
+    <section class="panel sgroup"><h2>Limite quotidienne</h2>
+      <label class="sfield inline">Demandes à l'IA par jour, pour toute l'organisation<input id="limit" type="number" min="1" max="10000" value="${st.limit}" ${pm ? "" : "disabled"}></label>
+    </section>
+    <div class="settings-actions"><button class="btn" id="test-conn">Tester la connexion</button><button class="btn primary" id="save-settings" ${pm ? "" : "disabled"}>Enregistrer</button></div>
+    ${st.test ? `<p class="test-result ${st.test.ok ? "ok" : "ko"}" role="status">${esc(st.test.text)}</p>` : ""}
+    ${st.msg ? `<p class="test-result ${st.msg.ok ? "ok" : "ko"}" role="status">${esc(st.msg.text)}</p>` : ""}
+  </div>`;
+}
+function readSettingsForm() {
+  const radio = document.querySelector('input[name="model"]:checked')?.value;
+  const model = radio === "autre" ? $("#model-custom").value.trim() : radio;
+  return { key: $("#or-key").value.trim(), model, limit: Number($("#limit").value) };
+}
+function saveSettings() {
+  const f = readSettingsForm(), st = S.settings;
+  // La clé saisie est effacée tout de suite : la démo n'en garde que les 4 derniers caractères, pour l'affichage.
+  $("#or-key").value = "";
+  st.test = null;
+  if (f.key && !(/^sk-or-/.test(f.key) && f.key.length >= 20)) { st.msg = { ok: false, text: "Une clé OpenRouter commence par « sk-or- » (à créer sur openrouter.ai/keys)." }; render(); return; }
+  if (!/^[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._:-]*$/i.test(f.model || "")) { st.msg = { ok: false, text: "Identifiant de modèle invalide (ex. anthropic/claude-opus-5.5)." }; render(); return; }
+  if (!(f.limit >= 1 && f.limit <= 10000)) { st.msg = { ok: false, text: "La limite doit être entre 1 et 10 000 demandes." }; render(); return; }
+  if (f.key) st.keyLast4 = f.key.slice(-4);
+  st.model = f.model; st.limit = f.limit;
+  st.msg = { ok: true, text: "Paramètres enregistrés (démo : seuls les 4 derniers caractères de la clé sont affichés, rien n'est conservé)." };
+  render();
+}
+function testConnection() {
+  const f = readSettingsForm(), st = S.settings; st.msg = null;
+  if (!f.key && !st.keyLast4) { st.test = { ok: false, text: "Aucune clé : saisissez une clé OpenRouter, puis testez." }; render(); return; }
+  st.test = { ok: true, text: `Démo : test simulé avec ${f.model}. Dans l'application, ce bouton fait un vrai petit appel au modèle et signale une clé refusée, un modèle introuvable ou des crédits épuisés.` };
+  render();
+}
+
 function renderProject(p) {
   const msgs = S.chats[p.id] || [];
   return `<div class="layout"><div style="min-width:0">
@@ -793,7 +875,7 @@ function renderNew() {
 function render() {
   renderNav();
   const m = $("#main");
-  m.innerHTML = S.view === "today" ? renderToday() : S.view === "new" ? renderNew() : S.view === "lessons" ? renderLessons() : renderProject(P(S.view));
+  m.innerHTML = S.view === "today" ? renderToday() : S.view === "new" ? renderNew() : S.view === "lessons" ? renderLessons() : S.view === "parametres" ? renderSettings() : renderProject(P(S.view));
   const log = $("#log"); if (log) log.scrollTop = 1e6;
   if (S.flash) { const row = $("#row-" + S.flash); if (row) row.scrollIntoView({ block: "center", behavior: "smooth" }); S.flash = null; }
   renderTour();
@@ -830,6 +912,9 @@ document.addEventListener("click", (e) => {
     S.flash = t.id; render(); toast(was ? "Note enregistrée. La validation a été décochée : le chef de projet doit revalider." : isNew ? "Note ajoutée. Étape suivante : évaluez-la de 1 à 5 avec les étoiles." : "Note enregistrée."); return;
   }
   if (b.id === "synth") { synthesize(); return; }
+  if (b.id === "save-settings") { saveSettings(); return; }
+  if (b.id === "test-conn") { testConnection(); return; }
+  if (b.id === "del-key") { S.settings.keyLast4 = null; S.settings.msg = { ok: true, text: "Clé supprimée." }; S.settings.test = null; render(); return; }
   if (b.dataset.undo) { const r = S.resolved[b.dataset.undo]; if (r?.undo) { r.undo(); delete S.resolved[b.dataset.undo]; render(); toast("Annulé."); } return; }
   if (b.dataset.later) { S.handled.push(b.dataset.later); render(); toast("Masqué jusqu'à demain."); return; }
   if (b.id === "unhide") { S.handled = []; render(); return; }

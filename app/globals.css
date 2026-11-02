@@ -246,3 +246,31 @@ table.wide{min-width:820px}
 .need .stars button{animation:pulse 1.4s ease-in-out infinite;outline:2px solid var(--st-doing);outline-offset:1px;border-radius:4px}
 @keyframes pulse{50%{outline-color:transparent}}
 @media (prefers-reduced-motion:reduce){.need .stars button{animation:none}}
+
+/* paramètres */
+.gear{margin-left:auto;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;color:var(--muted);font-weight:500}
+.gear.on{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.usage + .gear{margin-left:8px}
+.settings{max-width:760px;margin-top:22px;display:flex;flex-direction:column;gap:14px}
+.settings-head h1{font-family:var(--f-display);font-size:clamp(24px,4vw,32px);margin:0 0 4px;letter-spacing:-.015em}
+.settings-head p{margin:0}
+.sgroup{display:flex;flex-direction:column;gap:8px}
+.sgroup h2{margin:0}
+.kline{margin:0;font-size:14px}
+.warn-text{color:var(--st-block);font-weight:500}
+.sfield{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.sfield input{border:1px solid var(--line);border-radius:8px;padding:9px 10px;background:var(--bg);color:var(--ink);font:inherit;font-size:15px;max-width:460px}
+.sfield.inline input{max-width:140px}
+.small{font-size:12px;margin:0}
+.models{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px}
+.mcard{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer;background:var(--surface)}
+.mcard.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.mcard > span{display:flex;flex-direction:column;gap:2px;min-width:0}
+.mcard input[type="radio"]{margin-top:3px;accent-color:var(--accent)}
+.mcard input[type="text"],.mcard input:not([type]){border:1px solid var(--line);border-radius:6px;padding:5px 8px;background:var(--bg);color:var(--ink);margin-top:4px;width:100%}
+.settings-actions{display:flex;gap:8px;flex-wrap:wrap}
+.test-result{margin:0;padding:10px 12px;border-radius:8px;font-size:14px}
+.test-result.ok{background:color-mix(in srgb,var(--st-done) 14%,var(--surface));color:var(--ink)}
+.test-result.ko{background:color-mix(in srgb,var(--st-block) 12%,var(--surface));color:var(--st-block)}
+.btn.danger{color:var(--st-block);align-self:flex-start;padding-left:0}
+.settings a{color:var(--accent)}

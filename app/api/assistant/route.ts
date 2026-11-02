@@ -2,7 +2,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { runAssistant } from "@/lib/ai/assistant";
-import { MissingKeyError } from "@/lib/ai/client";
+import { MissingKeyError, resolveAi } from "@/lib/ai/client";
+import { SecretError } from "@/lib/secrets";
 import { getDb } from "@/lib/db/client";
 import { countAiRequest, getAiUsage, getBoard, recordAiTokens } from "@/lib/db/repo";
 import { currentSession } from "@/lib/session";
@@ -26,13 +27,15 @@ export async function POST(req: Request) {
   const board = await getBoard(db, projectId);
   if (!board || board.orgId !== orgId) return NextResponse.json({ error: "Projet introuvable." }, { status: 404 });
 
-  const quota = await countAiRequest(db, orgId, Number(process.env.AI_DAILY_LIMIT || 200));
+  let ai;
+  try { ai = await resolveAi(db, orgId); } catch (e) { return NextResponse.json({ error: errorMessage(e) }, { status: errorStatus(e) }); }
+  const quota = await countAiRequest(db, orgId, ai.dailyLimit);
   if (!quota.ok) {
     return NextResponse.json({ error: `Limite quotidienne atteinte (${quota.limit} demandes). Elle se réinitialise demain.` }, { status: 429 });
   }
 
   try {
-    const result = await runAssistant(db, board, user, history, message);
+    const result = await runAssistant(db, board, user, history, message, ai);
     await recordAiTokens(db, orgId, result.usage);
     console.info("[assistant]", JSON.stringify({ org: orgId, project: projectId, ...result.usage, actions: result.actions.length }));
     return NextResponse.json({ ...result, board: await getBoard(db, projectId), usage: await getAiUsage(db, orgId) });
@@ -42,8 +45,8 @@ export async function POST(req: Request) {
 }
 
 function errorMessage(e: unknown): string {
-  if (e instanceof MissingKeyError) return e.message;
-  if (e instanceof Anthropic.AuthenticationError) return "Clé OpenRouter refusée : vérifiez OPENROUTER_API_KEY.";
+  if (e instanceof MissingKeyError || e instanceof SecretError) return e.message;
+  if (e instanceof Anthropic.AuthenticationError) return "Clé OpenRouter refusée : vérifiez-la dans Paramètres.";
   if (e instanceof Anthropic.RateLimitError) return "Trop de demandes vers le modèle. Réessayez dans un instant.";
   if (e instanceof Anthropic.APIConnectionError) return "Impossible de joindre OpenRouter. Vérifiez la connexion.";
   if (e instanceof Anthropic.APIError) {
@@ -55,7 +58,8 @@ function errorMessage(e: unknown): string {
   return "Erreur interne de l'assistant.";
 }
 function errorStatus(e: unknown): number {
-  if (e instanceof MissingKeyError) return 500;
+  if (e instanceof MissingKeyError) return 400;
+  if (e instanceof SecretError) return 500;
   if (e instanceof Anthropic.RateLimitError) return 429;
   if (e instanceof Anthropic.APIError) return 502;
   return 500;

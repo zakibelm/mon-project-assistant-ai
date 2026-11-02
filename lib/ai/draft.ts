@@ -5,7 +5,7 @@
  */
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
-import { getClient, MODEL } from "./client";
+import type { Ai } from "./client";
 import { PRIORITIES } from "@/lib/board/types";
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -92,9 +92,9 @@ Règles :
 
 export class DraftError extends Error {}
 
-export async function draftProject(text: string, existingMembers: string[], today = new Date().toISOString().slice(0, 10)) {
-  const response = await getClient().messages.create({
-    model: MODEL(),
+export async function draftProject(ai: Ai, text: string, existingMembers: string[], today = new Date().toISOString().slice(0, 10)) {
+  const response = await ai.client.messages.create({
+    model: ai.model,
     max_tokens: 16000,
     system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
     tools: [PROPOSE_TOOL],

@@ -25,11 +25,22 @@ Dans le tableau d'un projet, trois colonnes : **Notes**, **Évaluation** (1 à 5
 - **La case « Validé »** n'est active que pour le chef de projet du projet (rôle contenant « chef de projet »). Toute modification ultérieure de la note ou de l'évaluation la décoche.
 - **La page « Leçons apprises »** montre, sans IA, les notes validées et leur poids par type de problème. « Synthétiser avec l'IA » en tire des leçons (problème type, ce qui a marché, quoi faire dès le cadrage). Le poids de chaque leçon est la moyenne des évaluations de ses notes sources, calculée par le serveur.
 
+## Paramètres
+
+La page **Paramètres** (en haut à droite) règle l'IA de l'organisation :
+
+- **la clé OpenRouter :** chiffrée en base (AES-256-GCM, avec `APP_SECRET`) et jamais réaffichée, seuls ses 4 derniers caractères le sont. On peut la remplacer ou la supprimer ;
+- **le modèle :** Claude Opus 5.5 (recommandé), Sonnet 5.5, Haiku 5.5, ou un autre identifiant OpenRouter ;
+- **la limite quotidienne** de demandes à l'IA ;
+- **« Tester la connexion » :** un vrai petit appel au modèle, avec la clé saisie avant même de l'enregistrer.
+
+Ordre de priorité : Paramètres, puis `.env`. Seuls les chefs de projet peuvent modifier ces réglages. L'adresse de la passerelle (`AI_BASE_URL`) n'est réglable que côté serveur, pour qu'on ne puisse pas détourner les appels ni la clé.
+
 ## Démarrer en local
 
 ```bash
 npm install
-cp .env.example .env.local   # renseigner OPENROUTER_API_KEY
+cp .env.example .env.local   # facultatif : la clé OpenRouter peut se saisir dans Paramètres
 npm run dev                  # http://localhost:3000
 ```
 
@@ -65,6 +76,9 @@ Documentation complète : `docs/assistant-ia.md`.
 | `PUT /api/tasks/:id/note` | `{ problemType, problem, resolution }` → note d'explication (responsable ou chef de projet) |
 | `PUT /api/tasks/:id/rating` | `{ rating: 1..5 | null }` → évaluation proposée (responsable ou chef de projet) ; décoche la validation |
 | `PUT /api/tasks/:id/validation` | `{ validated }` → case « Validé », réservée au chef de projet |
+| `GET /api/settings` | Paramètres de l'IA (clé jamais renvoyée : seulement sa source et ses 4 derniers caractères), droits, usage du jour |
+| `PUT /api/settings` | `{ key?, model?, dailyLimit? }` → enregistre (clé chiffrée ; `key: null` la supprime) ; réservé aux chefs de projet |
+| `POST /api/settings/test` | `{ key?, model? }` → vrai petit appel au modèle pour vérifier la clé et le modèle, sans rien enregistrer |
 | `GET /api/lessons?projectId=` | Notes validées, statistiques par type de problème (sans IA), dernières leçons |
 | `POST /api/lessons` | `{ projectId \| null }` → synthèse des leçons par l'IA à partir des notes validées |
 | `POST /api/tasks/:id/comments` | `{ body }` → message dans le fil de la tâche (les @mentions notifient) |

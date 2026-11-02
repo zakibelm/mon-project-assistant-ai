@@ -5,7 +5,7 @@
  */
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
-import { getClient, MODEL } from "./client";
+import type { Ai } from "./client";
 import { PROBLEM_LABEL, PROBLEM_TYPES } from "@/lib/board/types";
 import type { LessonInput, ValidatedNote } from "@/lib/db/repo";
 
@@ -50,14 +50,14 @@ Regroupe les notes par type de problème et produis des leçons utiles pour les 
 
 export class LessonsError extends Error {}
 
-export async function synthesizeLessons(notes: ValidatedNote[]): Promise<{ lessons: LessonInput[]; usage: { input: number; output: number; cacheRead: number; cacheWrite: number } }> {
+export async function synthesizeLessons(ai: Ai, notes: ValidatedNote[]): Promise<{ lessons: LessonInput[]; usage: { input: number; output: number; cacheRead: number; cacheWrite: number } }> {
   if (!notes.length) throw new LessonsError("Aucune note validée pour l'instant : le chef de projet doit d'abord cocher « Validé » sur des notes évaluées.");
   const payload = notes.map((n) => ({
     id: n.taskId, projet: n.projectName, tache: n.task, type: PROBLEM_LABEL[n.problemType], evaluation: n.rating,
     probleme: n.problem, resolution: n.resolution || "(non précisée)", date_prevue: n.baselineDue, echeance: n.due,
   }));
-  const response = await getClient().messages.create({
-    model: MODEL(),
+  const response = await ai.client.messages.create({
+    model: ai.model,
     max_tokens: 16000,
     system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
     tools: [RECORD_TOOL],

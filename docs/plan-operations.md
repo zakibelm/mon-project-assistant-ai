@@ -45,7 +45,8 @@ Procédure détaillée : `deploiement-vps.md`. Règles :
 
 | Secret | Où | Rotation |
 |---|---|---|
-| `OPENROUTER_API_KEY` | `.env` sur le VPS (`chmod 600`) | Tous les 6 mois, ou immédiatement en cas de doute |
+| Clé OpenRouter | Saisie dans **Paramètres**, chiffrée en base (AES-256-GCM) ; ou `OPENROUTER_API_KEY` dans `.env` en secours | Tous les 6 mois, ou immédiatement en cas de doute : la remplacer dans Paramètres |
+| `APP_SECRET` | `.env` sur le VPS (`chmod 600`) et gestionnaire de mots de passe | Rarement. Le changer rend la clé enregistrée illisible : il faut alors la ressaisir dans Paramètres |
 | `POSTGRES_PASSWORD` | `.env` sur le VPS | En cas de doute (demande un arrêt court) |
 | Mot de passe nginx (`auth_basic`) | Fichier htpasswd sur le VPS | À chaque départ d'une personne |
 
@@ -114,7 +115,7 @@ from ai_usage order by day desc limit 14;
 
 **L'assistant répond « Clé OpenRouter refusée » ou « Crédits insuffisants »**
 1. Vérifier le compte OpenRouter (crédits, limite de dépense, clé active).
-2. Si la clé a changé : mettre à jour `.env`, puis `docker compose up -d app`.
+2. Dans **Paramètres**, saisir la nouvelle clé, puis « Tester la connexion » et « Enregistrer ». Aucun redémarrage n'est nécessaire.
 
 **L'assistant a fait une mauvaise modification**
 1. `GET /api/tasks/<id>/history` montre ce qui a changé, quand, et pour le compte de qui.
