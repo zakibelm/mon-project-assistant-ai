@@ -45,6 +45,20 @@ Le point du jour préfigure la phase C : le même calcul, lancé chaque matin, a
   - chaque tâche reçoit son événement de création dans l'historique.
 - La demande compte dans la limite quotidienne d'IA et ses tokens sont enregistrés.
 
+## Base de connaissances métier (RAG)
+
+Les documents du dossier `rag/` (voir `rag/README.md`) sont découpés par section `##` et indexés en mémoire (BM25, `lib/rag/index.ts`). La recherche est plein texte, avec une racinisation légère : on garde le début des mots. Le titre de section pèse plus que le corps du texte.
+
+Comment l'IA s'en sert :
+- **Assistant :** l'outil `search_knowledge` (premier de la liste) renvoie 4 extraits avec leur fichier source. Le prompt système demande de le consulter pour toute question de méthode (retards, blocages, escalade, planification, estimation, rapports, leçons) et de citer la source entre parenthèses.
+- **Cadrage d'un projet :** 4 extraits liés au texte du brief sont joints au message. Consigne : appliquer leurs règles (ordre des tâches, marges, dépendances, validations).
+- **Leçons apprises :** 4 extraits liés aux problèmes des notes sont joints. Consigne : s'en servir pour les recommandations, sans les présenter comme des faits observés.
+
+Limites et évolution :
+- la recherche est lexicale : le bon extrait arrive le plus souvent dans les 3 premiers, mais pas toujours en tête. C'est pourquoi on en transmet 4 ;
+- si la base dépasse quelques centaines d'extraits, il faudra passer à une recherche par le sens (plongements vectoriels, par exemple pgvector dans PostgreSQL) ;
+- les textes de `rag/` sont envoyés au modèle : ils ne doivent contenir ni données personnelles ni secrets.
+
 ## Leçons apprises
 
 `lib/ai/lessons.ts` analyse les **notes validées par les chefs de projet** (case « Validé » cochée), d'un projet ou de toute l'organisation, en un seul appel :

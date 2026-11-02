@@ -9,6 +9,46 @@ interface View {
 }
 interface Usage { requests: number; input: number; output: number; cacheRead: number }
 type Test = { ok: true; model: string; ms: number; reply: string } | { ok: false; error: string; model?: string };
+interface KDoc { source: string; title: string; tags: string[]; origin: string; sections: number }
+interface KHit { source: string; title: string; heading: string; text: string; score: number }
+
+/** Base de connaissances métier (dossier rag/) : documents chargés et recherche de test. */
+function Knowledge() {
+  const [docs, setDocs] = useState<KDoc[] | null>(null);
+  const [q, setQ] = useState("");
+  const [hits, setHits] = useState<KHit[] | null>(null);
+  const load = (extra = "") => fetch(`/api/knowledge${extra}`).then((r) => r.json());
+  useEffect(() => { load().then((d) => setDocs(d.docs)); }, []);
+  const search = async () => { if (!q.trim()) return; const d = await load(`?q=${encodeURIComponent(q.trim())}`); setDocs(d.docs); setHits(d.results); };
+  return (
+    <section className="panel sgroup">
+      <h2>Base de connaissances <span className="muted small">dossier rag/</span></h2>
+      <p className="muted small" style={{ margin: 0 }}>Documents métier (méthodes, règles du PMO, glossaire) que l&apos;IA consulte et cite avant de répondre. Pour en ajouter : un fichier Markdown dans le dossier <span className="mono">rag/</span> du serveur (voir <span className="mono">rag/README.md</span>).</p>
+      {!docs ? <p className="muted small">Chargement…</p> : docs.length === 0 ? <p className="warn-text">Aucun document : le dossier rag/ est vide ou introuvable.</p> : (
+        <ul className="kdocs">
+          {docs.map((d) => (
+            <li key={d.source}><strong>{d.title}</strong> <span className="muted small">· {d.sections} extrait{d.sections > 1 ? "s" : ""} · <span className="mono">{d.source}</span></span>
+              {d.tags.length > 0 && <div className="muted small">{d.tags.join(", ")}</div>}</li>
+          ))}
+        </ul>
+      )}
+      <div className="ksearch">
+        <input id="k-q" placeholder="Tester une question, ex. « le fournisseur ne répond pas »" value={q} onChange={(e) => setQ(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") search(); }} aria-label="Question de test pour la base de connaissances" />
+        <button className="btn" onClick={search} disabled={!q.trim()}>Chercher</button>
+        <button className="btn ghost" onClick={() => load("?reload=1").then((d) => setDocs(d.docs))} title="Relire le dossier après un ajout">Relire le dossier</button>
+      </div>
+      {hits && (hits.length === 0 ? <p className="muted small">Aucun extrait pertinent.</p> : (
+        <ol className="khits">
+          {hits.map((h) => (
+            <li key={h.source + h.heading}><strong>{h.heading}</strong> <span className="muted small">· {h.title} · <span className="mono">{h.source}</span> · pertinence {h.score}</span>
+              <p>{h.text.length > 320 ? h.text.slice(0, 320) + "…" : h.text}</p></li>
+          ))}
+        </ol>
+      ))}
+    </section>
+  );
+}
 
 /** Paramètres de l'IA : clé OpenRouter (chiffrée, jamais réaffichée), modèle, limite quotidienne, test de connexion. */
 export default function Settings() {
@@ -116,6 +156,8 @@ export default function Settings() {
         </label>
         {usage && <p className="muted small">Aujourd&apos;hui : {usage.requests} demande(s), {usage.input + usage.cacheRead} tokens lus (dont {usage.cacheRead} depuis le cache), {usage.output} écrits.</p>}
       </section>
+
+      <Knowledge />
 
       <div className="settings-actions">
         <button className="btn" onClick={onTest} disabled={!!busy || (!view.keySource && !key.trim()) || !chosenModel}>

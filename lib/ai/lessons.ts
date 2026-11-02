@@ -8,6 +8,7 @@ import { z } from "zod";
 import type { Ai } from "./client";
 import { PROBLEM_LABEL, PROBLEM_TYPES } from "@/lib/board/types";
 import type { LessonInput, ValidatedNote } from "@/lib/db/repo";
+import { formatExtracts, searchKnowledge } from "@/lib/rag/index";
 
 const RECORD_TOOL: Anthropic.Tool = {
   name: "record_lessons",
@@ -46,9 +47,18 @@ const SYSTEM = `Tu es l'analyste d'un bureau de projets (PMO) francophone. On te
 
 L'évaluation mesure la fiabilité et l'utilité de l'explication : 5 = cause réelle, bien comprise, leçon importante ; 1 = explication peu crédible ou peu utile. Pondère en conséquence : une leçon doit s'appuyer surtout sur des notes évaluées 4 ou 5 ; une note évaluée 1 ou 2 ne peut justifier une leçon que si d'autres notes la confirment.
 
+Des extraits de la base de connaissances métier du PMO peuvent accompagner les notes : appuie-toi dessus pour formuler les recommandations, mais ne les présente pas comme des faits observés dans les projets.
+
 Regroupe les notes par type de problème et produis des leçons utiles pour les prochains projets : le problème généralisé, la résolution qui a marché, et une recommandation concrète à appliquer dès le cadrage. N'invente rien qui ne soit pas dans les notes. Cite les identifiants des notes sources. Écris en français, de façon courte et concrète. Appelle record_lessons une seule fois.`;
 
 export class LessonsError extends Error {}
+
+/** Extraits de la base de connaissances liés aux problèmes rencontrés. */
+function knowledgeFor(notes: ValidatedNote[]) {
+  const q = "leçons apprises " + notes.map((n) => `${PROBLEM_LABEL[n.problemType]} ${n.problem}`).join(" ").slice(0, 1500);
+  const hits = searchKnowledge(q, 4);
+  return hits.length ? `\n\nConnaissances métier du PMO (extraits) :\n${formatExtracts(hits)}` : "";
+}
 
 export async function synthesizeLessons(ai: Ai, notes: ValidatedNote[]): Promise<{ lessons: LessonInput[]; usage: { input: number; output: number; cacheRead: number; cacheWrite: number } }> {
   if (!notes.length) throw new LessonsError("Aucune note validée pour l'instant : le chef de projet doit d'abord cocher « Validé » sur des notes évaluées.");
@@ -61,7 +71,7 @@ export async function synthesizeLessons(ai: Ai, notes: ValidatedNote[]): Promise
     max_tokens: 16000,
     system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
     tools: [RECORD_TOOL],
-    messages: [{ role: "user", content: `Notes validées (${notes.length}) :\n${JSON.stringify(payload)}` }],
+    messages: [{ role: "user", content: `Notes validées (${notes.length}) :\n${JSON.stringify(payload)}` + knowledgeFor(notes) }],
   });
   const usage = {
     input: response.usage.input_tokens, output: response.usage.output_tokens,

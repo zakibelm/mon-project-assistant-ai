@@ -19,6 +19,8 @@ COPY --from=build --chown=node:node /app/.next/standalone ./
 COPY --from=build --chown=node:node /app/.next/static ./.next/static
 # Migrations appliquées au démarrage de l'app.
 COPY --from=build --chown=node:node /app/drizzle ./drizzle
+# Base de connaissances métier (remplacée par le dossier monté du serveur, voir docker-compose.yml).
+COPY --from=build --chown=node:node /app/rag ./rag
 USER node
 EXPOSE 3000
 CMD ["node", "server.js"]

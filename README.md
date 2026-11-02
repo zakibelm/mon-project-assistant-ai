@@ -36,6 +36,19 @@ La page **Paramètres** (en haut à droite) règle l'IA de l'organisation :
 
 Ordre de priorité : Paramètres, puis `.env`. Seuls les chefs de projet peuvent modifier ces réglages. L'adresse de la passerelle (`AI_BASE_URL`) n'est réglable que côté serveur, pour qu'on ne puisse pas détourner les appels ni la clé.
 
+## Base de connaissances métier (RAG)
+
+Le dossier [`rag/`](rag/README.md) contient les connaissances métier que l'IA consulte avant de répondre. Au départ : gestion des retards, planification, suivi et rapports, leçons apprises, rôles et gouvernance du PMO, et un glossaire. Ce sont des textes originaux, à adapter.
+
+- **Format :** un fichier Markdown par sujet, avec un en-tête (`titre`, `tags`, `source`). Chaque section `##` est un extrait retrouvable.
+- **Recherche :** plein texte (BM25, `lib/rag/index.ts`), en mémoire, sans service externe ni coût. Les fichiers sont relus quand ils changent (au plus une minute après).
+- **Usage par l'IA :**
+  - l'assistant dispose de l'outil `search_knowledge` pour les questions de méthode et cite le fichier source ;
+  - le cadrage d'un projet et la synthèse des leçons reçoivent automatiquement les extraits pertinents.
+- **Paramètres :** la section « Base de connaissances » liste les documents chargés et permet de tester une recherche.
+- **Serveur :** `./rag` est monté dans le conteneur. On modifie les documents sur le VPS sans reconstruire l'image.
+- **Démo :** `npx tsx scripts/rag-export.mts` exporte les extraits en JSON pour mettre à jour la copie embarquée dans `demo/index.html`.
+
 ## Démarrer en local
 
 ```bash
@@ -79,6 +92,7 @@ Documentation complète : `docs/assistant-ia.md`.
 | `GET /api/settings` | Paramètres de l'IA (clé jamais renvoyée : seulement sa source et ses 4 derniers caractères), droits, usage du jour |
 | `PUT /api/settings` | `{ key?, model?, dailyLimit? }` → enregistre (clé chiffrée ; `key: null` la supprime) ; réservé aux chefs de projet |
 | `POST /api/settings/test` | `{ key?, model? }` → vrai petit appel au modèle pour vérifier la clé et le modèle, sans rien enregistrer |
+| `GET /api/knowledge?q=&reload=1` | Documents de la base de connaissances ; recherche de test avec `q` ; `reload=1` relit le dossier |
 | `GET /api/lessons?projectId=` | Notes validées, statistiques par type de problème (sans IA), dernières leçons |
 | `POST /api/lessons` | `{ projectId \| null }` → synthèse des leçons par l'IA à partir des notes validées |
 | `POST /api/tasks/:id/comments` | `{ body }` → message dans le fil de la tâche (les @mentions notifient) |

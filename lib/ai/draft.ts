@@ -7,6 +7,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import type { Ai } from "./client";
 import { PRIORITIES } from "@/lib/board/types";
+import { formatExtracts, searchKnowledge } from "@/lib/rag/index";
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const optDate = date.nullish().transform((v) => v ?? null);
@@ -88,11 +89,14 @@ Règles :
 - Équipe : reprends les personnes citées. Si l'une d'elles correspond à un membre existant du PMO (liste fournie), utilise exactement son nom. Si le texte ne nomme personne, crée des membres anonymes « Membre 1 », « Membre 2 »… avec un rôle.
 - Plan : 2 à 6 phases, 3 à 8 tâches par phase, chaque tâche assignée à un membre de l'équipe, avec une échéance entre le début et la fin du projet. Répartis la charge. Mets les tâches qui conditionnent les autres en premier et en priorité Haute.
 - Livrables : ceux que le texte cite, sinon ceux qui découlent clairement de l'objectif.
-- Écris en français, avec des noms de tâches courts commençant par un verbe.`;
+- Écris en français, avec des noms de tâches courts commençant par un verbe.
+- Des extraits de la base de connaissances métier du PMO peuvent accompagner le texte : applique leurs règles quand elles s'appliquent (ordre des tâches, marges, dépendances, validations).`;
 
 export class DraftError extends Error {}
 
 export async function draftProject(ai: Ai, text: string, existingMembers: string[], today = new Date().toISOString().slice(0, 10)) {
+  // Connaissances métier pertinentes pour ce projet (recherche dans rag/), jointes au texte.
+  const knowledge = searchKnowledge(`planification découpage dépendances marge ${text.slice(0, 600)}`, 4);
   const response = await ai.client.messages.create({
     model: ai.model,
     max_tokens: 16000,
@@ -100,7 +104,8 @@ export async function draftProject(ai: Ai, text: string, existingMembers: string
     tools: [PROPOSE_TOOL],
     messages: [{
       role: "user",
-      content: `Date du jour : ${today}.\nMembres existants du PMO : ${existingMembers.join(", ") || "aucun"}.\n\nTexte du projet :\n"""\n${text}\n"""`,
+      content: `Date du jour : ${today}.\nMembres existants du PMO : ${existingMembers.join(", ") || "aucun"}.\n\nTexte du projet :\n"""\n${text}\n"""` +
+        (knowledge.length ? `\n\nConnaissances métier du PMO (extraits) :\n${formatExtracts(knowledge)}` : ""),
     }],
   });
   const usage = {

@@ -274,3 +274,7 @@ table.wide{min-width:820px}
 .test-result.ko{background:color-mix(in srgb,var(--st-block) 12%,var(--surface));color:var(--st-block)}
 .btn.danger{color:var(--st-block);align-self:flex-start;padding-left:0}
 .settings a{color:var(--accent)}
+.kdocs,.khits{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:14px}
+.khits p{margin:2px 0 0;font-size:13px;color:var(--muted)}
+.ksearch{display:flex;gap:8px;flex-wrap:wrap}
+.ksearch input{flex:1 1 260px;min-width:0;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg);color:var(--ink);font:inherit}

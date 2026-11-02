@@ -5,6 +5,7 @@ import {
   Actor, addComment, BoardError, createAutomation, createGroup, createTasks, deleteTask, updateTask,
 } from "@/lib/db/repo";
 import { Board, PRIORITIES, STATUSES, STATUS_LABEL } from "@/lib/board/types";
+import { formatExtracts, searchKnowledge } from "@/lib/rag/index";
 
 /* Schémas de validation (les entrées du modèle sont validées avant exécution). */
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date attendue au format AAAA-MM-JJ");
@@ -32,11 +33,17 @@ const schemas = {
   delete_item: z.object({ item_id: z.string() }),
   add_comment: z.object({ item_id: z.string(), text: z.string().min(1) }),
   create_automation: z.object({ on_status: z.enum(STATUSES), notify: z.string() }),
+  search_knowledge: z.object({ query: z.string().trim().min(2).max(300) }),
 };
 export type ToolName = keyof typeof schemas;
 
 /* Définitions envoyées au modèle. L'ordre est fixe pour que le cache de prompt reste valide. */
 export const TOOLS: Anthropic.Tool[] = [
+  {
+    name: "search_knowledge",
+    description: "Cherche dans la base de connaissances métier du PMO (méthodes, règles, glossaire : dossier rag/). À utiliser pour toute question de méthode ou de règle (retards, blocages, escalade, planification, estimation, rapports, leçons apprises). Renvoie des extraits avec leur fichier source.",
+    input_schema: { type: "object", properties: { query: { type: "string", description: "La question ou les mots-clés, en français" } }, required: ["query"] },
+  },
   {
     name: "create_group",
     description: "Crée un nouveau groupe (section) dans le board. Renvoie l'identifiant du groupe, à utiliser ensuite dans create_items.",
@@ -144,6 +151,12 @@ export async function runTool(db: Db, projectId: string, actor: Actor, name: str
         const d = parsed.data as z.infer<typeof schemas.add_comment>;
         await addComment(db, projectId, actor, d.item_id, d.text);
         return { content: "Commentaire ajouté.", isError: false, summary: "Commentaire ajouté" };
+      }
+      case "search_knowledge": {
+        const hits = searchKnowledge((parsed.data as z.infer<typeof schemas.search_knowledge>).query, 4);
+        return hits.length
+          ? { content: formatExtracts(hits), isError: false }
+          : { content: "Aucun extrait pertinent dans la base de connaissances.", isError: false };
       }
       case "create_automation": {
         const d = parsed.data as z.infer<typeof schemas.create_automation>;

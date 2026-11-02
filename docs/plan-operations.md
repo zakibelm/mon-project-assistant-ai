@@ -151,6 +151,7 @@ L'outil enregistre des noms de membres, leurs tâches, leurs retards et leurs ex
 | Mise à jour des dépendances npm (`npm audit`, `npm outdated`) | Mensuelle, dans une branche dédiée |
 | Mise à jour des images figées (`node`, `postgres`) | Trimestrielle, dans un commit séparé |
 | Revue des coûts d'IA | Mensuelle |
+| Revue de la base de connaissances (`rag/`) : règles à jour, nouvelles leçons à y verser | Trimestrielle |
 | Test de restauration | Mensuel |
 | Revue de ce plan | À chaque fin de phase |
 

@@ -21,9 +21,16 @@ const mock = http.createServer((req, res) => {
 
     if (!json.tools) return msg([{ type: "text", text: "OK" }], "end_turn"); // test de connexion (Paramètres)
     if (scenario === "echo") return msg([{ type: "text", text: "Bien reçu." }], "end_turn");
+    if (scenario === "rag") {
+      const lastMsg = json.messages.at(-1);
+      const res = Array.isArray(lastMsg.content) ? lastMsg.content.find((b) => b.type === "tool_result") : null;
+      if (!res) return msg([{ type: "tool_use", id: "tu_k", name: "search_knowledge", input: { query: "quand escalader au PMO" } }], "tool_use");
+      return msg([{ type: "text", text: "Au-delà de 3 jours de blocage, escaladez (rag/pmo/roles-et-gouvernance.md)." }], "end_turn");
+    }
     if (json.tools?.[0]?.name === "record_lessons") {
       if (scenario === "nolessons") return msg([{ type: "text", text: "Rien à dire." }], "end_turn");
-      const notes = JSON.parse(json.messages[0].content.slice(json.messages[0].content.indexOf("[")));
+      const c = json.messages[0].content;
+      const notes = JSON.parse(c.slice(c.indexOf("["), c.indexOf("\n\nConnaissances") > 0 ? c.indexOf("\n\nConnaissances") : undefined));
       const ext = notes.find((n) => n.type === "Dépendance externe");
       return msg([{ type: "tool_use", id: "tu_l", name: "record_lessons", input: { lessons: [
         { problem_type: "dependance_externe", title: "Prévoir les délais de réponse des tiers", problem: "Un tiers tarde à répondre.",
@@ -128,7 +135,7 @@ try {
   assert.deepEqual(first.body.system[0].cache_control, { type: "ephemeral" });
   const ctx = first.body.messages.at(-1).content[0].text;
   assert.match(ctx, /"deliverables":\[\{"name":"Site en ligne"/, "le contexte du projet est envoyé au modèle");
-  assert.deepEqual(first.body.tools.map((t) => t.name), ["create_group", "create_items", "update_item", "delete_item", "add_comment", "create_automation"]);
+  assert.deepEqual(first.body.tools.map((t) => t.name), ["search_knowledge", "create_group", "create_items", "update_item", "delete_item", "add_comment", "create_automation"]);
   const third = seen[2].body.messages.at(-1).content;
   assert.equal(third.find((b) => b.tool_use_id === "tu_3").is_error, true, "erreur de validation renvoyée au modèle");
   assert.equal(seen.length, 3);
@@ -258,6 +265,22 @@ try {
   assert.equal(seen.at(-1).auth, "Bearer sk-or-test", "clé supprimée : repli sur la clé du serveur");
   scenario = "plan";
 
+  // 1 septies. Base de connaissances (rag/) : liste, recherche, outil de l'assistant, extraits joints au cadrage
+  const k = await fetch(base + "/api/knowledge?q=" + encodeURIComponent("quand escalader au PMO")).then((r) => r.json());
+  assert.ok(k.docs.length >= 6, "documents de rag/ chargés");
+  assert.equal(k.results[0].source, "rag/pmo/roles-et-gouvernance.md");
+  assert.equal(k.results[0].heading, "Règles d'escalade");
+  scenario = "rag";
+  const rr = await ask("Ce blocage dure depuis 4 jours, que dois-je faire ?");
+  assert.equal(rr.status, 200);
+  assert.match(rr.data.reply, /rag\/pmo\/roles-et-gouvernance\.md/);
+  const toolRes = seen.at(-1).body.messages.at(-1).content.find((b) => b.type === "tool_result");
+  assert.match(toolRes.content, /Règles d'escalade/, "l'outil renvoie l'extrait au modèle");
+  assert.match(seen.at(-1).body.system[0].text, /search_knowledge/, "le prompt système demande de consulter la base");
+  scenario = "plan";
+  await post("/api/projects/draft", { text: "Projet de migration avec un fournisseur externe, dépendances fortes et validations client, livraison en décembre." });
+  assert.match(seen.at(-1).body.messages[0].content, /Connaissances métier du PMO \(extraits\)/, "extraits joints au cadrage");
+
   // 2. Refus du filtre de sécurité
   scenario = "refusal";
   const r2 = await ask("…");
@@ -276,7 +299,7 @@ try {
   const r5 = await fetch(base + "/api/assistant", { method: "POST", body: JSON.stringify({ projectId: "inconnu", message: "x" }) });
   assert.equal(r5.status, 404);
 
-  console.log("OK : 11 scénarios passés (point du jour, nouveau projet, responsable, résolution sur place, notes et leçons, paramètres de l'IA, planification avec outils et historique, refus, clé refusée, requête invalide, projet inconnu)");
+  console.log("OK : 12 scénarios passés (point du jour, nouveau projet, responsable, résolution sur place, notes et leçons, paramètres de l'IA, base de connaissances, planification avec outils et historique, refus, clé refusée, requête invalide, projet inconnu)");
 } catch (e) {
   console.error(e.message, "\n--- logs app ---\n", logs.slice(-2000));
   process.exitCode = 1;
