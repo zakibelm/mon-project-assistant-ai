@@ -1,0 +1,453 @@
+<title>Assistant Projet</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout : barre d'onglets collante, puis soit le prototype (board + assistant), soit la grille de décisions. */
+:root{
+  --bg:#F4F6F7; --surface:#FFFFFF; --sunken:#EBEFF0; --line:#D7DEE0;
+  --ink:#14212A; --muted:#5B6B74; --accent:#0B6E6C; --accent-ink:#FFFFFF; --accent-soft:#D6ECEA;
+  --st-todo:#8A979E; --st-doing:#C98A0B; --st-block:#C2413A; --st-done:#2E8B57;
+  --keep:#2E8B57; --modify:#C98A0B; --remove:#C2413A;
+  --keep-soft:#DDF0E4; --modify-soft:#F7EBCF; --remove-soft:#F6DCDA;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --r:8px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F171C; --surface:#162128; --sunken:#1C2A32; --line:#2A3A43;
+  --ink:#E4ECEF; --muted:#93A4AD; --accent:#3FB5B1; --accent-ink:#06201F; --accent-soft:#173A3A;
+  --st-todo:#7D8B92; --st-doing:#E0A52C; --st-block:#E2675F; --st-done:#4CB27A;
+  --keep:#4CB27A; --modify:#E0A52C; --remove:#E2675F;
+  --keep-soft:#173327; --modify-soft:#3A2E12; --remove-soft:#3D1D1B; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F171C; --surface:#162128; --sunken:#1C2A32; --line:#2A3A43;
+  --ink:#E4ECEF; --muted:#93A4AD; --accent:#3FB5B1; --accent-ink:#06201F; --accent-soft:#173A3A;
+  --st-todo:#7D8B92; --st-doing:#E0A52C; --st-block:#E2675F; --st-done:#4CB27A;
+  --keep:#4CB27A; --modify:#E0A52C; --remove:#E2675F;
+  --keep-soft:#173327; --modify-soft:#3A2E12; --remove-soft:#3D1D1B; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1240px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+header.top .wrap{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-block:12px}
+.brand{display:flex;align-items:baseline;gap:10px;margin-right:auto}
+.brand b{font-family:var(--f-display);font-size:20px;letter-spacing:-.01em}
+.brand span{font-family:var(--f-mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.tabs{display:flex;gap:4px;background:var(--sunken);padding:4px;border-radius:999px}
+.tabs a{padding:6px 14px;border-radius:999px;text-decoration:none;color:var(--muted);font-weight:500}
+.tabs a[aria-current="page"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgb(0 0 0 / .08)}
+.tabs a .n{font-family:var(--f-mono);font-size:11px;margin-left:6px;color:var(--muted)}
+
+main{padding-block:24px 48px}
+h1{font-family:var(--f-display);font-size:28px;line-height:1.15;margin:0;text-wrap:balance;letter-spacing:-.015em}
+h2{font-family:var(--f-display);font-size:18px;margin:0;text-wrap:balance}
+.lede{color:var(--muted);max-width:68ch;margin:6px 0 0}
+
+/* feature badge linking prototype to decisions */
+.fb{display:inline-flex;align-items:center;gap:5px;font-family:var(--f-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;
+  padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);background:var(--surface);text-decoration:none;white-space:nowrap}
+.fb i{width:7px;height:7px;border-radius:50%;background:var(--muted);font-style:normal}
+.fb[data-d="keep"]{background:var(--keep-soft);border-color:transparent;color:var(--ink)} .fb[data-d="keep"] i{background:var(--keep)}
+.fb[data-d="modify"]{background:var(--modify-soft);border-color:transparent;color:var(--ink)} .fb[data-d="modify"] i{background:var(--modify)}
+.fb[data-d="remove"]{background:var(--remove-soft);border-color:transparent;color:var(--ink)} .fb[data-d="remove"] i{background:var(--remove)}
+body.hide-fb .fb{display:none}
+
+/* ---------- PROTOTYPE ---------- */
+.proto{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;margin-top:20px;align-items:start}
+@media (max-width:960px){.proto{grid-template-columns:minmax(0,1fr)}}
+.boardhead{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.crumbs{font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:transparent;padding:6px 12px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.btn{border:1px solid var(--line);background:var(--surface);padding:6px 12px;border-radius:var(--r)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:500}
+.btn:hover{border-color:var(--accent)}
+label.chk{display:inline-flex;gap:6px;align-items:center;color:var(--muted);font-size:13px}
+
+.progress{margin:16px 0;display:flex;flex-direction:column;gap:6px}
+.bar{display:flex;height:8px;border-radius:999px;overflow:hidden;background:var(--sunken)}
+.bar span{height:100%}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
+
+.group{margin-top:18px}
+.group h3{display:flex;align-items:center;gap:10px;margin:0 0 8px;font-size:15px;font-family:var(--f-display);font-weight:600}
+.group h3 .sw{width:4px;height:18px;border-radius:2px}
+.group h3 .cnt{font-family:var(--f-mono);font-size:11px;color:var(--muted);font-weight:400}
+.tscroll{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:680px}
+th,td{text-align:left;padding:0;border-bottom:1px solid var(--line);height:40px;vertical-align:middle}
+th{font-size:11px;font-family:var(--f-mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:500;padding:0 10px;background:var(--sunken)}
+tr:last-child td{border-bottom:0}
+td.name input{width:100%;border:0;background:transparent;padding:8px 10px}
+td.name input:hover{background:var(--sunken)}
+td.c{border-left:1px solid var(--line);width:1%}
+.status{display:block;width:132px;height:40px;border:0;color:#fff;font-weight:500;font-size:13px;text-align:center}
+.status[data-s="todo"]{background:var(--st-todo)} .status[data-s="doing"]{background:var(--st-doing)}
+.status[data-s="block"]{background:var(--st-block)} .status[data-s="done"]{background:var(--st-done)}
+.who{border:0;background:transparent;padding:0 10px;height:40px;width:130px}
+.date{border:0;background:transparent;padding:0 10px;height:40px;width:148px;font-family:var(--f-mono);font-size:12.5px}
+.prio{font-family:var(--f-mono);font-size:12px;padding:0 10px;width:80px;text-align:center;border:0;background:transparent;height:40px}
+.sub{font-family:var(--f-mono);font-size:11px;color:var(--muted);padding:0 10px;white-space:nowrap}
+.del{border:0;background:transparent;color:var(--muted);width:36px;height:40px}
+.del:hover{color:var(--remove)}
+.addrow{display:flex;gap:8px;padding:6px 10px;border-top:1px dashed var(--line)}
+.addrow input{flex:1;min-width:0;border:0;background:transparent;padding:6px 0}
+
+.kanban{display:grid;grid-template-columns:repeat(4,minmax(200px,1fr));gap:12px;overflow-x:auto;margin-top:16px;padding-bottom:4px}
+.kcol{background:var(--sunken);border-radius:var(--r);padding:10px;min-height:180px;display:flex;flex-direction:column;gap:8px}
+.kcol.over{outline:2px dashed var(--accent)}
+.kcol h4{margin:0 0 4px;display:flex;justify-content:space-between;font-size:13px}
+.kcol h4 span{font-family:var(--f-mono);color:var(--muted);font-weight:400}
+.kcol h4::before{content:"";width:8px;height:8px;border-radius:2px;margin-right:8px;align-self:center;background:var(--c)}
+.kcol h4 b{margin-right:auto;font-weight:600}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:10px;cursor:grab;display:flex;flex-direction:column;gap:6px}
+.card .meta{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);font-family:var(--f-mono)}
+.card .gtag{font-size:11px;color:var(--muted)}
+
+/* assistant */
+.assist{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);display:flex;flex-direction:column;position:sticky;top:calc(env(safe-area-inset-top,0px) + 76px);max-height:calc(100vh - 110px)}
+@media (max-width:960px){.assist{position:static;max-height:none}}
+.assist header{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.assist header p{margin:0;font-size:12px;color:var(--muted)}
+.log{padding:12px 14px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;min-height:200px;flex:1}
+.msg{padding:8px 10px;border-radius:8px;max-width:92%;white-space:pre-wrap;font-size:13px}
+.msg.u{align-self:flex-end;background:var(--accent);color:var(--accent-ink)}
+.msg.a{align-self:flex-start;background:var(--sunken)}
+.sugg{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 10px}
+.sugg button{font-size:12px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 10px;color:var(--muted)}
+.sugg button:hover{color:var(--ink);border-color:var(--accent)}
+.assist form{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--line)}
+.assist form input{flex:1;min-width:0;border:1px solid var(--line);border-radius:var(--r);padding:7px 10px;background:var(--bg)}
+
+/* ---------- DECISIONS ---------- */
+.dsum{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:20px}
+.dsum button{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:12px 14px;text-align:left;display:flex;flex-direction:column;gap:2px}
+.dsum button[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.dsum b{font-family:var(--f-display);font-size:26px;font-variant-numeric:tabular-nums;line-height:1.1}
+.dsum span{font-size:12px;color:var(--muted)}
+.dsum .k b{color:var(--keep)} .dsum .m b{color:var(--modify)} .dsum .r b{color:var(--remove)}
+.dbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;align-items:center}
+.dbar .note{font-size:12px;color:var(--muted);margin-left:auto}
+.cat{margin-top:26px}
+.cat > h2{display:flex;align-items:baseline;gap:10px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.cat > h2 small{font-family:var(--f-mono);font-size:11px;color:var(--muted);font-weight:400}
+.feat{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1.3fr) auto;gap:16px;padding:14px 0;border-bottom:1px solid var(--line);align-items:start}
+.feat:last-child{border-bottom:0}
+@media (max-width:820px){.feat{grid-template-columns:minmax(0,1fr)}}
+.feat h3{margin:0;font-size:15px;font-weight:600}
+.feat .mon{margin:4px 0 0;font-size:13px;color:var(--muted)}
+.feat .lbl{font-family:var(--f-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.feat .prop{margin:2px 0 0;font-size:13px}
+.feat textarea{width:100%;margin-top:8px;border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:var(--bg);font-size:13px;resize:vertical;min-height:34px}
+.choice{display:flex;flex-direction:column;gap:6px;min-width:150px}
+.choice .rec{font-size:11px;color:var(--muted)}
+.dseg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.dseg button{border:0;background:var(--surface);padding:6px 10px;font-size:12.5px;color:var(--muted)}
+.dseg button+button{border-left:1px solid var(--line)}
+.dseg button[aria-pressed="true"][data-v="keep"]{background:var(--keep);color:#fff}
+.dseg button[aria-pressed="true"][data-v="modify"]{background:var(--modify);color:#fff}
+.dseg button[aria-pressed="true"][data-v="remove"]{background:var(--remove);color:#fff}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:999px;font-size:13px}
+#copyfallback{width:100%;min-height:180px;margin-top:12px;font-family:var(--f-mono);font-size:12px;border:1px solid var(--line);border-radius:var(--r);padding:10px;background:var(--surface)}
+@media (prefers-reduced-motion:no-preference){.card,.btn,.dseg button{transition:background .15s,border-color .15s}}
+</style>
+
+<header class="top"><div class="wrap">
+  <div class="brand"><b>Assistant Projet</b><span>prototype v0.1</span></div>
+  <nav class="tabs" aria-label="Sections">
+    <a href="#prototype" id="tab-prototype">Prototype</a>
+    <a href="#decisions" id="tab-decisions">Garder / modifier / supprimer<span class="n" id="tabcount"></span></a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+<!-- ===== PROTOTYPE ===== -->
+<section id="v-prototype">
+  <h1>Notre copie de Monday.com, en version IA-first</h1>
+  <p class="lede">Tout fonctionne dans cette page : modifiez les tâches, changez de vue, glissez les cartes et parlez à l'assistant. Les pastilles de couleur renvoient à votre décision pour chaque fonctionnalité dans l'onglet « Garder / modifier / supprimer ».</p>
+
+  <div class="proto">
+    <div style="min-width:0">
+      <div class="boardhead">
+        <div>
+          <div class="crumbs">Espace « Agence » › Projets <a class="fb" data-f="workspaces" href="#decisions"><i></i></a></div>
+          <h2 style="font-size:22px;margin-top:2px">Lancement du site web</h2>
+        </div>
+        <div class="tools">
+          <div class="seg" role="group" aria-label="Vue">
+            <button id="vt-table" aria-pressed="true">Tableau</button>
+            <button id="vt-kanban" aria-pressed="false">Kanban</button>
+          </div>
+          <a class="fb" data-f="views" href="#decisions"><i></i></a>
+          <button class="btn" id="addgroup">+ Groupe</button>
+          <label class="chk"><input type="checkbox" id="showfb" checked> Pastilles</label>
+        </div>
+      </div>
+
+      <div class="progress">
+        <div class="bar" id="bar"></div>
+        <div class="legend" id="legend"></div>
+      </div>
+
+      <div id="tableview"></div>
+      <div id="kanbanview" hidden></div>
+    </div>
+
+    <aside class="assist" aria-label="Assistant IA">
+      <header>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <h2>Assistant</h2><a class="fb" data-f="ai-agent" href="#decisions"><i></i></a>
+        </div>
+        <p>Simulation locale : pas encore relié à Claude. Les commandes ci-dessous modifient vraiment le board.</p>
+      </header>
+      <div class="log" id="log"></div>
+      <div class="sugg" id="sugg"></div>
+      <form id="askform"><input id="ask" placeholder="Ex. ajoute « Rédiger la FAQ » pour Sami" autocomplete="off" aria-label="Message à l'assistant"><button class="btn primary">Envoyer</button></form>
+    </aside>
+  </div>
+</section>
+
+<!-- ===== DECISIONS ===== -->
+<section id="v-decisions" hidden>
+  <h1>Ce qu'on garde, ce qu'on modifie, ce qu'on supprime</h1>
+  <p class="lede">Chaque ligne reprend une fonctionnalité de Monday.com avec ma recommandation déjà cochée. Changez le choix ou ajoutez une note, puis copiez la synthèse et collez-la dans la conversation : je m'en servirai pour construire la vraie application. Vos choix restent enregistrés dans ce navigateur.</p>
+
+  <div class="dsum" id="dsum"></div>
+  <div class="dbar">
+    <button class="btn primary" id="copy">Copier la synthèse</button>
+    <button class="btn" id="reset">Revenir aux recommandations</button>
+    <span class="note" id="savednote"></span>
+  </div>
+  <textarea id="copyfallback" hidden readonly aria-label="Synthèse à copier"></textarea>
+  <div id="cats"></div>
+</section>
+</main>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+/* ---------------- Feature catalogue ---------------- */
+const FEATURES = [
+ {id:"workspaces",cat:"Structure",name:"Espaces de travail et dossiers",mon:"Compte › workspaces › dossiers › boards, plus des espaces séparés par produit.",prop:"Un espace par client ou équipe, et des dossiers simples. Pas de séparation par produit.",rec:"keep"},
+ {id:"boards",cat:"Structure",name:"Boards, groupes et éléments",mon:"Le cœur de Monday : un tableau, des groupes de lignes et des éléments.",prop:"Identique. C'est le modèle de données qu'on reprend tel quel.",rec:"keep"},
+ {id:"subitems",cat:"Structure",name:"Sous-éléments",mon:"Mini-board enfant sous chaque élément, avec ses propres colonnes.",prop:"Une simple checklist de sous-tâches, avec les mêmes colonnes que le parent. Plus facile à comprendre.",rec:"modify"},
+ {id:"columns",cat:"Structure",name:"Types de colonnes",mon:"Une trentaine de types : statut, personne, date, timeline, formule, miroir, notation, vote…",prop:"10 types utiles : statut, personne, date, texte, nombre, étiquettes, fichier, lien, priorité, relation.",rec:"modify"},
+ {id:"connect",cat:"Structure",name:"Relations entre boards (connect + mirror)",mon:"Relier des éléments de boards différents et afficher leurs champs.",prop:"À garder en version simple pour les dépendances entre projets. Le miroir viendra en V2.",rec:"keep"},
+
+ {id:"views",cat:"Vues",name:"Vues Tableau et Kanban",mon:"Les deux vues les plus utilisées.",prop:"Disponibles dès le MVP, comme dans ce prototype.",rec:"keep"},
+ {id:"calendar",cat:"Vues",name:"Vue Calendrier",mon:"Les éléments affichés par date.",prop:"À garder, en V1.",rec:"keep"},
+ {id:"gantt",cat:"Vues",name:"Timeline / Gantt",mon:"Diagramme de Gantt avec dépendances et chemin critique sur les plans supérieurs.",prop:"Timeline en lecture seule, générée par l'assistant. Pas d'éditeur Gantt complet.",rec:"modify"},
+ {id:"workload",cat:"Vues",name:"Vue Charge de travail",mon:"Capacité par personne, réservée aux plans Pro.",prop:"Remplacée par l'assistant, qui signale qui est surchargé.",rec:"remove"},
+ {id:"forms",cat:"Vues",name:"Formulaires",mon:"Un formulaire public qui crée des éléments.",prop:"Formulaire simple, sans personnalisation avancée.",rec:"modify"},
+ {id:"dashboards",cat:"Vues",name:"Tableaux de bord multi-boards",mon:"Widgets qui regroupent plusieurs boards.",prop:"Un tableau de bord par espace, avec un résumé rédigé par l'IA en tête.",rec:"modify"},
+
+ {id:"updates",cat:"Collaboration",name:"Mises à jour et commentaires",mon:"Fil de discussion sur chaque élément, avec @mentions et fichiers.",prop:"À garder, avec en plus un résumé IA des longues discussions.",rec:"keep"},
+ {id:"notifs",cat:"Collaboration",name:"Notifications et boîte de réception",mon:"Notifications dans l'app et par e-mail, plus une inbox.",prop:"À garder, avec un récapitulatif quotidien pour éviter le bruit.",rec:"keep"},
+ {id:"docs",cat:"Collaboration",name:"Documents collaboratifs (Docs)",mon:"Éditeur de documents relié aux boards.",prop:"Pas de Docs. On se contente d'un champ de notes riche par projet.",rec:"remove"},
+ {id:"perms",cat:"Collaboration",name:"Permissions et rôles",mon:"Boards principaux, privés ou partageables, invités, permissions par colonne (Enterprise).",prop:"Trois rôles seulement : admin, membre, invité. Pas de permission par colonne.",rec:"modify"},
+
+ {id:"autom",cat:"Automatisation et IA",name:"Automatisations « quand… alors… »",mon:"Recettes prédéfinies, limitées par un quota mensuel selon le plan.",prop:"Création en langage naturel via l'assistant, sans quota.",rec:"modify"},
+ {id:"ai-agent",cat:"Automatisation et IA",name:"Assistant IA (Sidekick et agents)",mon:"Un assistant contextuel et des agents, facturés en crédits.",prop:"L'assistant devient l'interface principale : il planifie, crée, met à jour et résume. Il est inclus dans l'abonnement.",rec:"modify"},
+ {id:"magic",cat:"Automatisation et IA",name:"Création de board par IA (Magic)",mon:"Génère un board complet à partir d'une description.",prop:"Intégré à l'assistant : « Crée un projet de lancement produit » produit les groupes, les tâches et les dates.",rec:"keep"},
+ {id:"vibe",cat:"Automatisation et IA",name:"Générateur d'applications no-code (Vibe)",mon:"Créer des mini-applications sur la plateforme.",prop:"Hors sujet pour un assistant de projet.",rec:"remove"},
+ {id:"credits",cat:"Automatisation et IA",name:"Crédits IA",mon:"Allocation mensuelle de crédits consommés par l'IA.",prop:"Pas de crédits visibles. Une limite d'usage raisonnable est incluse dans le prix.",rec:"remove"},
+
+ {id:"integr",cat:"Intégrations",name:"Intégrations natives",mon:"Plus de 200 intégrations (Slack, Gmail, Teams, Jira…) limitées par quota.",prop:"Quelques intégrations au départ : Slack, Gmail, Google Agenda et webhooks.",rec:"modify"},
+ {id:"api",cat:"Intégrations",name:"API publique",mon:"API GraphQL avec limites de complexité.",prop:"API REST simple, plus un serveur MCP pour que Claude et d'autres IA pilotent les projets.",rec:"modify"},
+ {id:"market",cat:"Intégrations",name:"Marketplace d'applications",mon:"Boutique d'applications tierces.",prop:"Pas de marketplace : trop lourd à maintenir pour démarrer.",rec:"remove"},
+
+ {id:"suites",cat:"Offre",name:"Produits séparés (CRM, Dev, Service)",mon:"Des produits distincts, construits sur la même plateforme.",prop:"Un seul produit : la gestion de projet avec assistant.",rec:"remove"},
+ {id:"pricing",cat:"Offre",name:"Tarif par siège avec minimum de 3",mon:"Facturation par siège, avec un minimum de 3 sièges et des paliers imposés.",prop:"Gratuit en solo, puis un prix par personne réellement active, sans minimum.",rec:"modify"},
+ {id:"lang",cat:"Offre",name:"Langue et marché",mon:"Produit pensé d'abord en anglais.",prop:"Pensé d'abord en français (interface, assistant, formats de date), anglais en second.",rec:"modify"}
+];
+const LBL={keep:"Garder",modify:"Modifier",remove:"Supprimer"};
+const STKEY="ap-decisions-v1";
+let dec={}; try{dec=JSON.parse(localStorage.getItem(STKEY)||"{}")||{}}catch(e){dec={}}
+FEATURES.forEach(f=>{ if(!dec[f.id]) dec[f.id]={v:f.rec,note:""}; });
+function save(){ try{localStorage.setItem(STKEY,JSON.stringify(dec))}catch(e){} }
+
+/* ---------------- Board state ---------------- */
+const ST=[["todo","À faire","--st-todo"],["doing","En cours","--st-doing"],["block","Bloqué","--st-block"],["done","Terminé","--st-done"]];
+const PEOPLE=["Zaki","Sami","Léa","Inès","—"];
+let uid=100;
+let groups=[{id:"g1",name:"Cette semaine",color:"var(--accent)"},{id:"g2",name:"Semaine prochaine",color:"var(--st-doing)"},{id:"g3",name:"Plus tard",color:"var(--st-todo)"}];
+let items=[
+ {id:1,g:"g1",name:"Valider la maquette de la page d'accueil",s:"done",who:"Léa",due:"2026-11-03",p:"Haute",sub:"3/3"},
+ {id:2,g:"g1",name:"Rédiger les textes des pages services",s:"doing",who:"Zaki",due:"2026-11-05",p:"Haute",sub:"1/4"},
+ {id:3,g:"g1",name:"Configurer le nom de domaine et le SSL",s:"block",who:"Sami",due:"2026-11-04",p:"Moyenne",sub:"0/2"},
+ {id:4,g:"g1",name:"Choisir les photos de l'équipe",s:"todo",who:"Inès",due:"2026-11-06",p:"Basse",sub:""},
+ {id:5,g:"g2",name:"Intégrer le formulaire de contact",s:"todo",who:"Sami",due:"2026-11-10",p:"Moyenne",sub:"0/3"},
+ {id:6,g:"g2",name:"Mettre en place Google Analytics",s:"todo",who:"Zaki",due:"2026-11-11",p:"Basse",sub:""},
+ {id:7,g:"g2",name:"Relire l'ensemble des pages",s:"todo",who:"Léa",due:"2026-11-12",p:"Moyenne",sub:""},
+ {id:8,g:"g3",name:"Préparer l'annonce sur LinkedIn",s:"todo",who:"Inès",due:"2026-11-18",p:"Basse",sub:""}
+];
+let view="table";
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const stName=s=>ST.find(x=>x[0]===s)[1];
+
+function renderProgress(){
+  const n=items.length||1;
+  $("#bar").innerHTML=ST.map(([k,,c])=>{const w=items.filter(i=>i.s===k).length/n*100;return `<span style="width:${w}%;background:var(${c})" title="${stName(k)}"></span>`}).join("");
+  const done=items.filter(i=>i.s==="done").length;
+  $("#legend").innerHTML=ST.map(([k,l,c])=>`<span><i style="background:var(${c})"></i>${l} ${items.filter(i=>i.s===k).length}</span>`).join("")+`<span style="margin-left:auto">${Math.round(done/n*100)} % terminé</span>`;
+}
+function renderTable(){
+  $("#tableview").innerHTML=groups.map(g=>{
+    const rows=items.filter(i=>i.g===g.id);
+    return `<div class="group"><h3><span class="sw" style="background:${g.color}"></span>${esc(g.name)}<span class="cnt">${rows.length} tâche${rows.length>1?"s":""}</span>${g.id==="g1"?'<a class="fb" data-f="boards" href="#decisions"><i></i></a>':""}</h3>
+    <div class="tscroll"><table><thead><tr><th>Tâche</th><th>Statut <a class="fb" data-f="columns" href="#decisions" style="margin-left:4px"><i></i></a></th><th>Responsable</th><th>Échéance</th><th>Priorité</th><th>Sous-tâches</th><th></th></tr></thead><tbody>
+    ${rows.map(i=>`<tr data-id="${i.id}">
+      <td class="name"><input value="${esc(i.name)}" data-k="name" aria-label="Nom de la tâche"></td>
+      <td class="c"><button class="status" data-s="${i.s}" data-act="cycle" title="Cliquer pour changer">${stName(i.s)}</button></td>
+      <td class="c"><select class="who" data-k="who" aria-label="Responsable">${PEOPLE.map(p=>`<option${p===i.who?" selected":""}>${p}</option>`).join("")}</select></td>
+      <td class="c"><input type="date" class="date" value="${i.due}" data-k="due" aria-label="Échéance"></td>
+      <td class="c"><select class="prio" data-k="p" aria-label="Priorité">${["Haute","Moyenne","Basse"].map(p=>`<option${p===i.p?" selected":""}>${p}</option>`).join("")}</select></td>
+      <td class="c"><span class="sub">${i.sub||"—"}</span></td>
+      <td class="c"><button class="del" data-act="del" aria-label="Supprimer la tâche">✕</button></td></tr>`).join("")}
+    </tbody></table>
+    <form class="addrow" data-g="${g.id}"><input placeholder="+ Ajouter une tâche" aria-label="Nouvelle tâche dans ${esc(g.name)}"></form></div></div>`;
+  }).join("");
+}
+function renderKanban(){
+  $("#kanbanview").innerHTML=`<div class="kanban">${ST.map(([k,l,c])=>{
+    const cards=items.filter(i=>i.s===k);
+    return `<div class="kcol" data-s="${k}" style="--c:var(${c})"><h4><b>${l}</b><span>${cards.length}</span></h4>
+    ${cards.map(i=>`<div class="card" draggable="true" data-id="${i.id}" tabindex="0" title="Glisser, ou Entrée pour passer au statut suivant"><div>${esc(i.name)}</div>
+      <div class="meta"><span>${i.who}</span><span>${i.due.slice(8)}/${i.due.slice(5,7)}</span></div><div class="gtag">${esc((groups.find(g=>g.id===i.g)||{}).name||"")}</div></div>`).join("")}</div>`}).join("")}</div>`;
+}
+function render(){ renderProgress(); view==="table"?renderTable():renderKanban(); paintBadges(); }
+function cycle(i){ const idx=ST.findIndex(x=>x[0]===i.s); i.s=ST[(idx+1)%ST.length][0]; }
+
+$("#tableview").addEventListener("click",e=>{
+  const b=e.target.closest("[data-act]"); if(!b) return;
+  const id=+b.closest("tr").dataset.id, it=items.find(i=>i.id===id);
+  if(b.dataset.act==="cycle"){cycle(it);render();}
+  if(b.dataset.act==="del"){items=items.filter(i=>i.id!==id);render();toast("Tâche supprimée");}
+});
+$("#tableview").addEventListener("change",e=>{
+  const k=e.target.dataset.k; if(!k) return;
+  const it=items.find(i=>i.id===+e.target.closest("tr").dataset.id); it[k]=e.target.value; renderProgress();
+});
+$("#tableview").addEventListener("submit",e=>{
+  e.preventDefault(); const inp=e.target.querySelector("input"); const v=inp.value.trim(); if(!v) return;
+  items.push({id:++uid,g:e.target.dataset.g,name:v,s:"todo",who:"—",due:"2026-11-15",p:"Moyenne",sub:""}); render();
+  const f=document.querySelector(`.addrow[data-g="${e.target.dataset.g}"] input`); if(f) f.focus();
+});
+let dragId=null;
+$("#kanbanview").addEventListener("dragstart",e=>{const c=e.target.closest(".card"); if(c){dragId=+c.dataset.id; e.dataTransfer.effectAllowed="move";}});
+$("#kanbanview").addEventListener("dragover",e=>{const col=e.target.closest(".kcol"); if(col){e.preventDefault(); document.querySelectorAll(".kcol.over").forEach(x=>x!==col&&x.classList.remove("over")); col.classList.add("over");}});
+$("#kanbanview").addEventListener("drop",e=>{const col=e.target.closest(".kcol"); if(col&&dragId){e.preventDefault(); items.find(i=>i.id===dragId).s=col.dataset.s; dragId=null; render();}});
+$("#kanbanview").addEventListener("dragend",()=>document.querySelectorAll(".kcol.over").forEach(x=>x.classList.remove("over")));
+$("#kanbanview").addEventListener("keydown",e=>{const c=e.target.closest(".card"); if(c&&e.key==="Enter"){const id=+c.dataset.id; cycle(items.find(i=>i.id===id)); render(); const n=document.querySelector(`.card[data-id="${id}"]`); n&&n.focus();}});
+function setView(v){view=v; $("#vt-table").setAttribute("aria-pressed",v==="table"); $("#vt-kanban").setAttribute("aria-pressed",v==="kanban"); $("#tableview").hidden=v!=="table"; $("#kanbanview").hidden=v!=="kanban"; render();}
+$("#vt-table").onclick=()=>setView("table"); $("#vt-kanban").onclick=()=>setView("kanban");
+$("#addgroup").onclick=()=>{const n=groups.length+1; groups.push({id:"g"+(++uid),name:"Nouveau groupe "+n,color:"var(--st-done)"}); setView("table"); toast("Groupe ajouté");};
+$("#showfb").onchange=e=>document.body.classList.toggle("hide-fb",!e.target.checked);
+
+/* ---------------- Assistant (simulation) ---------------- */
+const SUGG=["Résume le projet","Qu'est-ce qui bloque ?","Ajoute « Rédiger la FAQ » pour Sami","Marque le formulaire de contact en cours","Qui est le plus chargé ?","Crée un projet d'événement client"];
+$("#sugg").innerHTML=SUGG.map(s=>`<button type="button">${esc(s)}</button>`).join("");
+$("#sugg").onclick=e=>{const b=e.target.closest("button"); if(b) ask(b.textContent);};
+function say(t,who){const d=document.createElement("div"); d.className="msg "+who; d.textContent=t; $("#log").appendChild(d); $("#log").scrollTop=1e6;}
+say("Bonjour Zaki. Je connais ce projet : 8 tâches et 1 blocage. Demandez-moi un résumé, d'ajouter une tâche, de changer un statut ou de créer un projet complet.","a");
+$("#askform").onsubmit=e=>{e.preventDefault(); const v=$("#ask").value.trim(); if(v){ask(v); $("#ask").value="";}};
+function norm(s){return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");}
+function findItem(q){const w=norm(q).split(/\s+/).filter(x=>x.length>3); let best=null,sc=0; items.forEach(i=>{const n=norm(i.name); const s=w.filter(x=>n.includes(x)).length; if(s>sc){sc=s;best=i;}}); return best;}
+function ask(t){
+  say(t,"u"); const n=norm(t); let r;
+  if(/resum|point|etat/.test(n)){
+    const c=s=>items.filter(i=>i.s===s).length;
+    const late=items.filter(i=>i.s!=="done"&&i.due<="2026-11-05").map(i=>"• "+i.name+" ("+i.who+", "+i.due.slice(8)+"/"+i.due.slice(5,7)+")");
+    r=`Sur ${items.length} tâches : ${c("done")} terminée(s), ${c("doing")} en cours, ${c("block")} bloquée(s), ${c("todo")} à faire.\nÉchéances proches :\n${late.join("\n")||"aucune"}`;
+  } else if(/bloqu/.test(n)&&!/marqu|passe|met/.test(n)){
+    const b=items.filter(i=>i.s==="block"); r=b.length?"Bloqué :\n"+b.map(i=>"• "+i.name+" ("+i.who+")").join("\n")+"\nJe propose de relancer "+b[0].who+" et de prévoir une solution de secours.":"Rien n'est bloqué.";
+  } else if(/charge|occupe|surcharge/.test(n)){
+    const m={}; items.filter(i=>i.s!=="done").forEach(i=>m[i.who]=(m[i.who]||0)+1);
+    const s=Object.entries(m).sort((a,b)=>b[1]-a[1]); r="Tâches ouvertes par personne :\n"+s.map(([p,k])=>"• "+p+" : "+k).join("\n")+(s[0]?"\n"+s[0][0]+" est le plus chargé.":"");
+  } else if(/^ajoute|^cree une tache|^nouvelle tache/.test(n)){
+    const m=t.match(/[«"“](.+?)[»"”]/); const name=m?m[1].trim():t.replace(/^\S+\s+/,"");
+    const who=PEOPLE.find(p=>p!=="—"&&n.includes(norm(p)))||"—";
+    items.push({id:++uid,g:"g1",name,s:"todo",who,due:"2026-11-07",p:"Moyenne",sub:""}); render();
+    r=`C'est ajouté dans « Cette semaine » : « ${name} », confié à ${who}, pour le 07/11.`;
+  } else if(/marqu|passe|met/.test(n)&&/(en cours|termin|fini|bloqu|a faire)/.test(n)){
+    const it=findItem(t.replace(/marque|passe|mets?|en cours|termin\w*|fini\w*|bloqu\w*|à faire/gi,""));
+    const s=/en cours/.test(n)?"doing":/termin|fini/.test(n)?"done":/bloqu/.test(n)?"block":"todo";
+    if(it){it.s=s; render(); r=`« ${it.name} » est maintenant au statut ${stName(s)}.`;} else r="Je n'ai pas trouvé cette tâche. Pouvez-vous la nommer autrement ?";
+  } else if(/projet|evenement|lancement/.test(n)&&/cree|genere|prepare|nouveau/.test(n)){
+    const gid="g"+(++uid); groups.push({id:gid,name:"Projet généré : événement client",color:"var(--st-done)"});
+    [["Fixer la date et le budget","Zaki","2026-11-09"],["Réserver le lieu","Inès","2026-11-13"],["Envoyer les invitations","Léa","2026-11-16"],["Préparer la présentation","Zaki","2026-11-20"],["Relancer les invités","Sami","2026-11-23"],["Envoyer le bilan","Léa","2026-11-30"]]
+      .forEach(([nm,w,d])=>items.push({id:++uid,g:gid,name:nm,s:"todo",who:w,due:d,p:"Moyenne",sub:""}));
+    setView("table"); r="J'ai créé un groupe de 6 tâches ordonnées avec responsables et dates. Dans la vraie version, je poserais d'abord 2 ou 3 questions (date, budget, nombre d'invités).";
+  } else r="Dans ce prototype, je comprends : résumé, blocages, charge, « ajoute « … » pour X », « marque … en cours / terminé », « crée un projet d'événement ». La vraie version utilisera Claude et comprendra tout.";
+  setTimeout(()=>say(r,"a"),250);
+}
+
+/* ---------------- Decisions view ---------------- */
+let filter="all";
+function counts(){const c={keep:0,modify:0,remove:0}; FEATURES.forEach(f=>c[dec[f.id].v]++); return c;}
+function renderDecisions(){
+  const c=counts();
+  $("#dsum").innerHTML=[["all","Toutes",FEATURES.length,""],["keep","À garder",c.keep,"k"],["modify","À modifier",c.modify,"m"],["remove","À supprimer",c.remove,"r"]]
+    .map(([k,l,n,cl])=>`<button class="${cl}" data-filter="${k}" aria-pressed="${filter===k}"><b>${n}</b><span>${l}</span></button>`).join("");
+  const changed=FEATURES.filter(f=>dec[f.id].v!==f.rec).length;
+  $("#savednote").textContent=changed?`${changed} choix différent${changed>1?"s":""} de ma recommandation`:"Toutes les recommandations sont acceptées";
+  const cats=[...new Set(FEATURES.map(f=>f.cat))];
+  $("#cats").innerHTML=cats.map(cat=>{
+    const fs=FEATURES.filter(f=>f.cat===cat&&(filter==="all"||dec[f.id].v===filter)); if(!fs.length) return "";
+    return `<section class="cat"><h2>${cat}<small>${fs.length}</small></h2>${fs.map(f=>`
+      <article class="feat" id="f-${f.id}">
+        <div><h3>${esc(f.name)}</h3><div class="lbl" style="margin-top:6px">Dans Monday</div><p class="mon">${esc(f.mon)}</p></div>
+        <div><div class="lbl">Notre version</div><p class="prop">${esc(f.prop)}</p>
+          <textarea id="note-${f.id}" data-note="${f.id}" rows="1" placeholder="Votre note (facultatif)">${esc(dec[f.id].note)}</textarea></div>
+        <div class="choice"><div class="dseg" role="group" aria-label="Décision pour ${esc(f.name)}">
+          ${["keep","modify","remove"].map(v=>`<button data-f="${f.id}" data-v="${v}" aria-pressed="${dec[f.id].v===v}">${LBL[v]}</button>`).join("")}
+        </div><span class="rec">Recommandé : ${LBL[f.rec]}</span></div>
+      </article>`).join("")}</section>`;
+  }).join("");
+  $("#tabcount").textContent=`${c.keep}·${c.modify}·${c.remove}`;
+  paintBadges();
+}
+$("#dsum").onclick=e=>{const b=e.target.closest("[data-filter]"); if(b){filter=b.dataset.filter; renderDecisions();}};
+$("#cats").addEventListener("click",e=>{const b=e.target.closest(".dseg button"); if(!b) return; dec[b.dataset.f].v=b.dataset.v; save(); renderDecisions();});
+$("#cats").addEventListener("input",e=>{const id=e.target.dataset.note; if(id){dec[id].note=e.target.value; save();}});
+$("#reset").onclick=()=>{FEATURES.forEach(f=>dec[f.id]={v:f.rec,note:dec[f.id].note}); save(); renderDecisions(); toast("Recommandations rétablies, notes conservées");};
+function summary(){
+  let out="# Décisions — Assistant Projet (copie de Monday.com)\n";
+  ["keep","modify","remove"].forEach(v=>{
+    const fs=FEATURES.filter(f=>dec[f.id].v===v); out+=`\n## ${LBL[v]} (${fs.length})\n`;
+    fs.forEach(f=>{out+=`- ${f.name}${v!=="remove"?" : "+f.prop:""}${dec[f.id].v!==f.rec?" [changé, recommandé : "+LBL[f.rec]+"]":""}${dec[f.id].note.trim()?"\n  Note : "+dec[f.id].note.trim():""}\n`;});
+  });
+  return out;
+}
+$("#copy").onclick=()=>{
+  const t=summary(), fb=$("#copyfallback");
+  const fallback=()=>{fb.hidden=false; fb.value=t; fb.focus(); fb.select(); toast("Copie automatique refusée : le texte est sélectionné, faites Ctrl+C");};
+  try{ navigator.clipboard.writeText(t).then(()=>{fb.hidden=true; toast("Synthèse copiée. Collez-la dans la conversation.");},fallback);}catch(e){fallback();}
+};
+
+/* badges */
+function paintBadges(){document.querySelectorAll(".fb[data-f]").forEach(b=>{const d=dec[b.dataset.f]; if(!d) return; const f=FEATURES.find(x=>x.id===b.dataset.f); b.dataset.d=d.v; b.innerHTML=`<i></i>${LBL[d.v]}`; b.title=f.name+" : "+LBL[d.v]+" (voir la décision)"; b.onclick=ev=>{ev.preventDefault(); filter="all"; location.hash="decisions"; setTimeout(()=>{const el=document.getElementById("f-"+f.id); if(el){el.scrollIntoView({block:"center"}); const btn=el.querySelector('[aria-pressed="true"]'); btn&&btn.focus();}},30);};});}
+
+let tt; function toast(m){const t=$("#toast"); t.textContent=m; t.hidden=false; clearTimeout(tt); tt=setTimeout(()=>t.hidden=true,2600);}
+
+/* routing */
+function route(){const r=location.hash==="#decisions"?"decisions":"prototype";
+  $("#v-prototype").hidden=r!=="prototype"; $("#v-decisions").hidden=r!=="decisions";
+  $("#tab-prototype").toggleAttribute("aria-current",r==="prototype"); $("#tab-decisions").toggleAttribute("aria-current",r==="decisions");
+  if(r==="prototype") $("#tab-prototype").setAttribute("aria-current","page"); else $("#tab-decisions").setAttribute("aria-current","page");
+  if(r==="decisions") renderDecisions(); else render();}
+window.addEventListener("hashchange",route);
+renderDecisions(); route();
+})();
+</script>
