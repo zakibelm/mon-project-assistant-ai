@@ -32,6 +32,19 @@ Le bouton « Plus tard » masque un point jusqu'au lendemain, dans le navigateur
 
 Le point du jour préfigure la phase C : le même calcul, lancé chaque matin, alimentera le point envoyé par courriel.
 
+## Cadrage d'un nouveau projet
+
+`lib/ai/draft.ts` transforme un texte libre en brouillon de projet, en un seul appel au modèle :
+
+- **Entrée :** la date du jour, la liste des membres déjà connus du PMO (pour réutiliser leurs noms), puis le texte.
+- **Sortie :** l'outil `propose_project`, appelé une fois : nom, description, dates, livrables, parties prenantes, équipe, phases et tâches (responsable, échéance, priorité, sous-tâches), et les questions à préciser. Le prompt interdit d'inventer des faits : une information manquante devient une hypothèse prudente, plus une question.
+- **Validation :** le brouillon est vérifié par zod. Un responsable qui n'est pas dans l'équipe est retiré (« à assigner »). Si le modèle n'appelle pas l'outil, l'utilisateur voit « L'assistant n'a pas produit de plan… » (HTTP 422).
+- **Rien n'est enregistré** à cette étape. Le chef de projet corrige tout dans l'écran de relecture, puis `POST /api/projects` crée le projet en une transaction (`createProjectFromDraft`) :
+  - les membres de même nom sont réutilisés (casse ignorée), les autres sont créés ;
+  - chaque échéance devient la date du plan de référence ;
+  - chaque tâche reçoit son événement de création dans l'historique.
+- La demande compte dans la limite quotidienne d'IA et ses tokens sont enregistrés.
+
 ## Parcours d'une demande
 
 ```

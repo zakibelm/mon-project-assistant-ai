@@ -19,6 +19,26 @@ const mock = http.createServer((req, res) => {
     const usage = { input_tokens: 900, output_tokens: 120, cache_read_input_tokens: 1500, cache_creation_input_tokens: 0 };
     const msg = (content, stop_reason) => send(200, { id: "msg_" + seen.length, type: "message", role: "assistant", model: json.model, content, stop_reason, stop_sequence: null, usage });
 
+    if (json.tools?.[0]?.name === "propose_project") {
+      if (scenario === "nodraft") return msg([{ type: "text", text: "Pouvez-vous préciser ?" }], "end_turn");
+      return msg([{ type: "tool_use", id: "tu_d", name: "propose_project", input: {
+        name: "Application clinique", description: "Réservation en ligne pour la clinique.", start_date: "2026-11-09", end_date: "2026-12-18",
+        deliverables: [{ name: "Maquettes validées", due: "2026-11-27" }, { name: "Mise en ligne", due: "2026-12-18" }],
+        stakeholders: [{ name: "Mme Roy", role: "valide les écrans" }],
+        team: [{ name: "Léa", role: "design" }, { name: "Karim", role: "développement mobile" }, { name: "Nadia", role: "tests" }],
+        groups: [
+          { name: "Conception", tasks: [
+            { name: "Obtenir l'accès à l'API du fournisseur", owner: "Karim", due: "2026-11-16", priority: "Haute" },
+            { name: "Dessiner les maquettes", owner: "Léa", due: "2026-11-25", priority: "Haute", subtasks: ["Accueil", "Réservation"] },
+          ] },
+          { name: "Réalisation", tasks: [
+            { name: "Développer la réservation", owner: "Inconnu", due: "2026-12-08", priority: "Moyenne" },
+            { name: "Tester la version de test", owner: "Nadia", due: "2026-12-11", priority: "Moyenne" },
+          ] },
+        ],
+        questions: ["Quel est le budget ?"],
+      } }], "tool_use");
+    }
     if (scenario === "unauthorized") return send(401, { type: "error", error: { type: "authentication_error", message: "bad key" } });
 
     const last = json.messages.at(-1);
@@ -96,6 +116,32 @@ try {
   assert.equal(seen.length, 3);
   assert.equal(r1.data.usage.cacheRead, 4500);
 
+  // 1 bis. Nouveau projet : brouillon par l'IA, relecture, création
+  const post = (path, body) => fetch(base + path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }).then(async (r) => ({ status: r.status, data: await r.json() }));
+  const d1 = await post("/api/projects/draft", { text: "Refonte de l'application de rendez-vous de la clinique, avec Léa, Karim et Nadia, livraison le 18 décembre." });
+  assert.equal(d1.status, 200, JSON.stringify(d1.data));
+  assert.equal(d1.data.draft.groups[1].tasks[0].owner, null, "responsable inconnu retiré");
+  assert.deepEqual(d1.data.draft.questions, ["Quel est le budget ?"]);
+  const draftReq = seen.at(-1).body;
+  assert.match(draftReq.messages[0].content, /Membres existants du PMO : .*Léa/, "les membres existants sont fournis au modèle");
+  const draft = d1.data.draft;
+  draft.groups[1].tasks[0].owner = "Karim"; // correction du chef de projet
+  draft.groups[0].tasks.pop();              // suppression d'une tâche
+  const c1 = await post("/api/projects", { draft });
+  assert.equal(c1.status, 201, JSON.stringify(c1.data));
+  assert.equal(c1.data.tasks, 3);
+  const created = await fetch(`${base}/api/projects/${c1.data.projectId}`).then((r) => r.json());
+  assert.equal(created.board.items.find((i) => i.name === "Développer la réservation").owner, "Karim");
+  assert.ok(created.board.items.every((i) => i.baselineDue === i.due));
+  const briefAfter = await fetch(base + "/api/brief").then((r) => r.json());
+  assert.ok(briefAfter.pulse.some((p) => p.id === c1.data.projectId), "le nouveau projet apparaît dans le portefeuille");
+  assert.equal((await post("/api/projects/draft", { text: "trop court" })).status, 400);
+  assert.equal((await post("/api/projects", { draft: { name: "" } })).status, 400);
+  scenario = "nodraft";
+  const d2 = await post("/api/projects/draft", { text: "Un projet très vague sans aucun détail utile pour le moment." });
+  assert.equal(d2.status, 422);
+  assert.match(d2.data.error, /n'a pas produit de plan/);
+
   // 2. Refus du filtre de sécurité
   scenario = "refusal";
   const r2 = await ask("…");
@@ -114,7 +160,7 @@ try {
   const r5 = await fetch(base + "/api/assistant", { method: "POST", body: JSON.stringify({ projectId: "inconnu", message: "x" }) });
   assert.equal(r5.status, 404);
 
-  console.log("OK : 6 scénarios passés (point du jour, planification avec outils et historique, refus, clé refusée, requête invalide, projet inconnu)");
+  console.log("OK : 7 scénarios passés (point du jour, nouveau projet, planification avec outils et historique, refus, clé refusée, requête invalide, projet inconnu)");
 } catch (e) {
   console.error(e.message, "\n--- logs app ---\n", logs.slice(-2000));
   process.exitCode = 1;

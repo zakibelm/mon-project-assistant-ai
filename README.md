@@ -10,6 +10,12 @@ Documentation : voir [`docs/README.md`](docs/README.md) (charte du projet, visio
 
 L'application s'ouvre sur le point du jour, pas sur un tableau. L'assistant présente ce qui demande une décision sur tout le portefeuille : blocages, retards, échéances proches, glissements, surcharges, livrables proches. Chaque point a des actions en un clic qui ouvrent le projet et confient la suite à l'assistant. Le point est calculé directement depuis la base (`lib/brief.ts`) : il s'affiche instantanément et ne coûte rien en IA.
 
+## Nouveau projet : du brief au plan en une étape
+
+![Relecture du plan proposé](docs/images/nouveau-projet-2.png)
+
+« + Nouveau projet » : on colle un brief, un courriel ou des notes. L'assistant en tire le contexte (objectif, dates, livrables, parties prenantes, équipe), un plan complet (phases, tâches assignées, échéances, sous-tâches) et les questions à préciser. Tout est modifiable avant validation ; rien n'est enregistré avant le clic « Créer le projet et figer le plan ». Les échéances validées deviennent le plan de référence. Les membres déjà connus du PMO sont réutilisés, les nouveaux créés. Sans clé d'IA, « Remplir moi-même » ouvre le même écran vide.
+
 ## Démarrer en local
 
 ```bash
@@ -42,6 +48,8 @@ Documentation complète : `docs/assistant-ia.md`.
 | Route | Rôle |
 |---|---|
 | `GET /api/brief` | Point du jour : ce qui demande une décision, sur tout le portefeuille |
+| `POST /api/projects/draft` | `{ text }` → brouillon de projet proposé par l'IA (rien n'est enregistré) |
+| `POST /api/projects` | `{ draft }` → crée le projet relu ; les échéances deviennent le plan de référence |
 | `GET /api/projects` | Portefeuille : projets et indicateurs (terminées, en retard, bloquées, glissées) |
 | `GET /api/projects/:id` | Tableau d'un projet |
 | `GET /api/tasks/:id/history` | Historique d'une tâche |

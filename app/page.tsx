@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { Board } from "@/lib/board/types";
 import type { Brief, BriefAction } from "@/lib/brief";
 import type { Msg } from "./components/Chat";
+import NewProject from "./components/NewProject";
 import ProjectView from "./components/ProjectView";
 import Today from "./components/Today";
 
@@ -10,7 +11,7 @@ interface Usage { requests: number; input: number; output: number; cacheRead: nu
 const STATE_COLOR = { ok: "var(--st-done)", watch: "var(--st-doing)", late: "var(--st-block)" } as const;
 
 export default function Home() {
-  // "today" = point du jour (accueil) ; sinon l'identifiant du projet ouvert.
+  // "today" = point du jour (accueil) ; "new" = création d'un projet ; sinon l'identifiant du projet ouvert.
   const [view, setView] = useState<string>("today");
   const [brief, setBrief] = useState<Brief | null>(null);
   const [board, setBoard] = useState<Board | null>(null);
@@ -22,6 +23,7 @@ export default function Home() {
   useEffect(() => { loadBrief(); }, [loadBrief]);
   useEffect(() => {
     if (view === "today") { loadBrief(); return; }
+    if (view === "new") return;
     setBoard(null);
     fetch(`/api/projects/${view}`).then((r) => r.json()).then((d) => { setBoard(d.board); setUsage(d.usage); }).catch(() => {});
   }, [view, loadBrief]);
@@ -66,13 +68,16 @@ export default function Home() {
                 <span className="dot" style={{ background: STATE_COLOR[p.state] }} />{p.name}
               </button>
             ))}
+            <button className="new" aria-current={view === "new" ? "page" : undefined} onClick={() => setView("new")}>+ Nouveau projet</button>
           </nav>
           {usage && <span className="usage mono">IA : {usage.requests} demande(s) aujourd&apos;hui</span>}
         </div>
       </header>
       <div className="page">
         {view === "today"
-          ? <Today brief={brief} onAct={act} onOpen={setView} />
+          ? <Today brief={brief} onAct={act} onOpen={setView} onNew={() => setView("new")} />
+          : view === "new"
+          ? <NewProject onCancel={() => setView("today")} onCreated={async (id) => { await loadBrief(); setView(id); }} />
           : <ProjectView board={board} msgs={chats[view] ?? []} busy={busy} onSend={(t) => send(view, t)} />}
       </div>
     </>

@@ -96,5 +96,27 @@ assert.equal((await repo.countAiRequest(db, DEMO_ORG_ID, 3)).ok, false);
 await repo.recordAiTokens(db, DEMO_ORG_ID, { input: 10, output: 5, cacheRead: 100, cacheWrite: 0 });
 assert.deepEqual(await repo.getAiUsage(db, DEMO_ORG_ID), { requests: 3, input: 10, output: 5, cacheRead: 100, cacheWrite: 0 });
 
-console.log(`OK (${process.env.DATABASE_URL ? "PostgreSQL" : "PGlite"}) : 11 vérifications de la base passées (point du jour, multi-projets, historique, glissement, automatisations, garde-fous, quota)`);
+// 11. Création d'un projet à partir d'un brouillon : membres existants réutilisés, nouveaux créés, plan de référence figé
+const before = await db.select().from(s.members);
+const { projectId, tasks: nTasks } = await repo.createProjectFromDraft(db, DEMO_ORG_ID, actor, {
+  name: "Application clinique", description: "Prise de rendez-vous en ligne.", start_date: "2026-11-09", end_date: "2026-12-18",
+  deliverables: [{ name: "Maquettes validées", due: "2026-11-27" }], stakeholders: [{ name: "Mme Roy", role: "valide les écrans" }],
+  team: [{ name: "léa", role: "design" }, { name: "Karim", role: "développement" }],
+  groups: [{ name: "Conception", tasks: [
+    { name: "Dessiner les maquettes", owner: "léa", due: "2026-11-20", priority: "Haute", subtasks: ["Accueil", "Réservation"] },
+    { name: "Obtenir l'accès à l'API", owner: "Karim", due: "2026-11-16", priority: "Haute", subtasks: [] },
+  ] }],
+});
+assert.equal(nTasks, 2);
+const after2 = await db.select().from(s.members);
+assert.equal(after2.length, before.length + 1, "Léa réutilisée (casse ignorée), Karim créé");
+const clinic = (await repo.getBoard(db, projectId))!;
+assert.deepEqual(clinic.members.map((m) => m.name).sort(), ["Karim", "Léa"]);
+assert.ok(clinic.items.every((i) => i.baselineDue === i.due), "plan de référence figé");
+assert.equal(clinic.items.find((i) => i.name === "Dessiner les maquettes")!.owner, "Léa");
+assert.equal(clinic.items[0].subtasks.length, 2);
+assert.equal((await repo.getTaskHistory(db, clinic.items[0].id))[0].kind, "created");
+assert.equal((await repo.listProjects(db, DEMO_ORG_ID)).length, 3);
+
+console.log(`OK (${process.env.DATABASE_URL ? "PostgreSQL" : "PGlite"}) : 12 vérifications de la base passées (point du jour, création de projet, multi-projets, historique, glissement, automatisations, garde-fous, quota)`);
 process.exit(0);

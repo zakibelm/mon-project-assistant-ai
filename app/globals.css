@@ -117,3 +117,52 @@ tr:last-child td{border-bottom:0}
 .chat form{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--line)}
 .chat form input{flex:1;min-width:0;border:1px solid var(--line);border-radius:8px;padding:9px 10px;background:var(--bg)}
 @media (prefers-reduced-motion:no-preference){.card,.pcard,.btn{transition:border-color .15s,background .15s}}
+
+/* nouveau projet */
+.nav .new{color:var(--accent);font-weight:600}
+.intake .intake-box{margin-top:22px;background:var(--surface);border-radius:14px;padding:8px;box-shadow:0 10px 30px rgb(0 0 0 / .25);max-width:880px}
+.intake textarea{width:100%;border:0;background:transparent;color:var(--ink);font:inherit;font-size:16px;line-height:1.55;padding:12px;resize:vertical;min-height:200px}
+.intake textarea:focus{outline:none}
+.intake-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:4px}
+.intake .go{border:0;background:var(--accent);color:var(--accent-ink);border-radius:10px;padding:10px 18px;font-weight:600}
+.intake .go:disabled{opacity:.5;cursor:default}
+.btn.ghost.light{color:var(--muted)}
+.hero .btn.ghost.light[style]{color:var(--hero-muted);background:transparent;border-color:transparent;padding-left:0}
+.hero .btn.ghost.light[style]:hover{color:var(--hero-ink)}
+.intake-error{margin:12px 0 0;color:#FFB4AE;max-width:880px}
+.review-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-top:24px}
+.review-head > div:first-child{flex:1 1 420px;min-width:0}
+.title-input{font-family:var(--f-display);font-weight:700;font-size:clamp(24px,4vw,34px);letter-spacing:-.015em;border:0;border-bottom:2px dashed var(--line);background:transparent;padding:2px 0;width:100%;color:var(--ink)}
+.title-input:focus{outline:none;border-bottom-color:var(--accent)}
+.review-cta{display:flex;gap:8px;flex-wrap:wrap}
+.btn.big{padding:10px 16px;font-size:15px}
+.questions{margin-top:16px;background:color-mix(in srgb,var(--st-doing) 14%,var(--surface));border:1px solid color-mix(in srgb,var(--st-doing) 40%,transparent);border-radius:var(--r);padding:12px 16px}
+.questions ul{margin:6px 0 0;padding-left:18px}
+.review-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.7fr);gap:16px;margin-top:16px;align-items:start}
+@media (max-width:980px){.review-grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-width:0}
+.panel h2{font-family:var(--f-display);font-size:19px;margin:0 0 10px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.panel h3{font-size:13px;font-family:var(--f-mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:18px 0 6px;font-weight:500}
+.field{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);margin-bottom:10px;min-width:0}
+.field input,.field textarea,.line input{border:1px solid var(--line);border-radius:8px;padding:7px 9px;background:var(--bg);color:var(--ink);font:inherit;font-size:14px;min-width:0}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.line{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.line input:first-child{flex:1}
+.line input[type="date"]{width:150px}
+.x{border:0;background:transparent;color:var(--muted);padding:4px 8px;border-radius:6px}
+.x:hover:not(:disabled){color:var(--st-block)}
+.x:disabled{opacity:.3;cursor:default}
+.add{border:1px dashed var(--line);background:transparent;color:var(--muted);border-radius:8px;padding:5px 10px;font-size:13px;margin-top:2px}
+.add:hover{color:var(--accent);border-color:var(--accent)}
+.pgroup{margin-bottom:18px}
+.gname{font-weight:600;font-size:15px !important}
+.plan table{min-width:680px}
+.plan td.c-owner{width:150px}
+.plan td.c-due{width:160px}
+.plan td.c-prio{width:120px}
+.plan td.c-x{width:40px}
+.plan td{padding:4px 6px}
+.cell{width:100%;border:1px solid transparent;background:transparent;border-radius:6px;padding:6px 6px;color:var(--ink);font:inherit;font-size:14px}
+.cell:hover,.cell:focus{border-color:var(--line);background:var(--bg)}
+select.cell[data-empty="true"]{color:var(--st-block)}
+.subs{font-size:12px;padding:0 6px 4px}

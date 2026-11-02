@@ -90,7 +90,7 @@ L'IA apprend de la cause retenue, pondérée par ce poids : une explication not�
 | Phase | Contenu | Résultat vérifiable |
 |---|---|---|
 | A. Base de données ✅ | PostgreSQL (PGlite en développement et en tests, PostgreSQL sur le VPS ou un service géré en production), accès via Drizzle ; modèle multi-projets (organisation, portefeuille, projets, membres partagés) ; historique des changements de statut et de date | Les données survivent au redémarrage ; on sait quand chaque tâche a changé ; deux projets coexistent dans la même organisation |
-| B. Contexte et plan | Fiche projet (description, livrables, faits saillants, parties prenantes, équipe), génération du plan, plan de référence figé | À partir d'une fiche projet, l'assistant propose un plan validable en un clic |
+| B. Contexte et plan ✅ (première version) | Fiche projet (description, livrables, faits saillants, parties prenantes, équipe), génération du plan, plan de référence figé | À partir d'une fiche projet, l'assistant propose un plan validable en un clic |
 | C. Suivi quotidien | Tâche planifiée chaque matin, détection des retards, point du matin | Chaque matin, un point liste ce qui avance, ce qui glisse et ce qu'il faut décider |
 | D. Explications | Demande de cause au responsable, catégories, nouvelle date ; évaluation par le chef de projet (poids 1 à 5, catégorie corrigée) | Chaque retard a une cause enregistrée et évaluée |
 | E. Apprentissage | Statistiques des causes, ajustement des estimations, registre des leçons | Au cadrage suivant, l'assistant cite les leçons pertinentes |
@@ -100,6 +100,7 @@ Les essais se font avec des membres numérotés jusqu'à la fin de la phase E.
 
 ## Avancement
 
+- 2026-11-02 : phase B, première version : « Nouveau projet » transforme un brief en contexte et en plan, relus et corrigés par le chef de projet, puis fige le plan de référence à la création. Reste à faire : refigé du plan de référence après une replanification validée.
 - 2026-11-02 : nouvelle page d'accueil « Aujourd'hui » : le point du jour sur tout le portefeuille, avec des actions en un clic confiées à l'assistant. L'outil s'ouvre sur les décisions à prendre, plus sur un tableau. Premier pas de la phase C, sans tâche planifiée ni envoi pour l'instant.
 - 2026-11-02 : phase A livrée (schéma multi-projets, historique des tâches, PGlite en local, PostgreSQL 17 sur le VPS via Docker, tests sur les deux).
 

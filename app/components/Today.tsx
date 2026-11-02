@@ -33,10 +33,11 @@ function useHandled(day: string | undefined) {
   return { handled, mark, reset };
 }
 
-export default function Today({ brief, onAct, onOpen }: {
+export default function Today({ brief, onAct, onOpen, onNew }: {
   brief: Brief | null;
   onAct: (action: BriefAction) => void;
   onOpen: (projectId: string) => void;
+  onNew: () => void;
 }) {
   const [q, setQ] = useState("");
   const [scope, setScope] = useState("");
@@ -48,6 +49,16 @@ export default function Today({ brief, onAct, onOpen }: {
   }, [brief, scope]);
 
   if (!brief) return <p className="muted" style={{ padding: 24 }}>Je prépare votre point du jour…</p>;
+  if (!brief.pulse.length) {
+    return (
+      <section className="hero">
+        <div className="date">{longDate(brief.today)}</div>
+        <h1>{greeting()} {brief.user}.</h1>
+        <p className="headline">Aucun projet pour l&apos;instant. Racontez-moi le premier : je prépare le contexte et le plan, vous validez.</p>
+        <div className="ask" style={{ display: "inline-flex" }}><button className="go" onClick={onNew}>Créer mon premier projet</button></div>
+      </section>
+    );
+  }
 
   const todo = brief.items.filter((i) => !handled.includes(i.id));
   const urgent = todo.filter((i) => i.severity === 3);
@@ -91,6 +102,7 @@ export default function Today({ brief, onAct, onOpen }: {
           </select>
           <button className="go" disabled={!q.trim() || !scope}>Demander</button>
         </form>
+        <button className="btn ghost light" style={{ marginTop: 14 }} onClick={onNew}>+ Démarrer un nouveau projet à partir d&apos;un brief</button>
       </section>
 
       <div className="pulse" aria-label="Portefeuille">

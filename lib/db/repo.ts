@@ -221,6 +221,59 @@ export async function createAutomation(db: Db, projectId: string, onStatus: Stat
   return { id: a.id, onStatus, notify: who.name };
 }
 
+/* ------------------------------------------------------- création de projet */
+
+export interface ProjectInput {
+  name: string; description: string; start_date: string | null; end_date: string | null;
+  deliverables: { name: string; due: string | null }[];
+  stakeholders: { name: string; role: string }[];
+  team: { name: string; role: string }[];
+  groups: { name: string; tasks: { name: string; owner: string | null; due: string | null; priority: Priority; subtasks: string[] }[] }[];
+}
+
+/**
+ * Crée un projet complet à partir d'un brouillon validé. Les membres déjà connus du
+ * PMO (même nom) sont réutilisés, les autres sont créés. Les échéances deviennent
+ * le plan de référence.
+ */
+export async function createProjectFromDraft(db: Db, orgId: string, actor: Actor, d: ProjectInput) {
+  return db.transaction(async (tx) => {
+    const t = tx as unknown as Db;
+    const [p] = await t.insert(s.projects).values({
+      orgId, name: d.name, description: d.description, startDate: d.start_date, endDate: d.end_date,
+    }).returning({ id: s.projects.id });
+
+    const existing = await t.select({ id: s.members.id, name: s.members.displayName }).from(s.members).where(eq(s.members.orgId, orgId));
+    const idByName = new Map<string, string>();
+    for (const m of d.team) {
+      const key = m.name.trim().toLowerCase();
+      if ([...idByName.keys()].includes(key)) continue;
+      let id = existing.find((e) => e.name.toLowerCase() === key)?.id;
+      if (!id) [{ id }] = await t.insert(s.members).values({ orgId, displayName: m.name.trim() }).returning({ id: s.members.id });
+      idByName.set(key, id!);
+      await t.insert(s.projectMembers).values({ projectId: p.id, memberId: id!, role: m.role || "membre" });
+    }
+    if (d.deliverables.length) await t.insert(s.deliverables).values(d.deliverables.map((x) => ({ projectId: p.id, name: x.name, dueDate: x.due })));
+    if (d.stakeholders.length) await t.insert(s.stakeholders).values(d.stakeholders.map((x) => ({ projectId: p.id, name: x.name, role: x.role })));
+
+    let created = 0;
+    for (const [gi, g] of d.groups.entries()) {
+      const [grp] = await t.insert(s.taskGroups).values({ projectId: p.id, name: g.name, position: gi }).returning({ id: s.taskGroups.id });
+      for (const [ti, task] of g.tasks.entries()) {
+        const [row] = await t.insert(s.tasks).values({
+          projectId: p.id, groupId: grp.id, name: task.name, priority: task.priority, position: ti,
+          ownerId: task.owner ? idByName.get(task.owner.trim().toLowerCase()) ?? null : null,
+          dueDate: task.due, baselineDueDate: task.due,
+        }).returning({ id: s.tasks.id });
+        if (task.subtasks.length) await t.insert(s.subtasks).values(task.subtasks.map((text, k) => ({ taskId: row.id, text, position: k })));
+        await t.insert(s.taskEvents).values({ projectId: p.id, taskId: row.id, actorId: actor.memberId, actorKind: actor.kind, kind: "created", newValue: task.name });
+        created++;
+      }
+    }
+    return { projectId: p.id, tasks: created };
+  });
+}
+
 /* ------------------------------------------------------------- usage de l'IA */
 
 export async function countAiRequest(db: Db, orgId: string, limit: number) {
