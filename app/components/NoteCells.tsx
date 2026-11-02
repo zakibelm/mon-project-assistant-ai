@@ -46,23 +46,26 @@ export function RatingCell({ item, canEdit, busy, onRate }: { item: Item; canEdi
   );
 }
 
-/** Cellule « Validé » : case à cocher, active seulement pour le chef de projet. */
+/**
+ * Cellule « Validé » : case à cocher. Grisée seulement pour les non-chefs de projet, avec la raison écrite à côté
+ * (pas seulement au survol, invisible sur téléphone). Pour le chef de projet, cocher sans évaluation renvoie un message.
+ */
 export function ValidateCell({ item, isManager, busy, onValidate }: { item: Item; isManager: boolean; busy: boolean; onValidate: (v: boolean) => void }) {
   if (!item.note) return <span className="muted">—</span>;
   const ready = item.note.rating !== null;
-  const title = !isManager ? `${VALIDATE_HELP} (lecture seule pour vous)` : !ready ? "Évaluez d'abord la note de 1 à 5." : VALIDATE_HELP;
+  const label = item.note.validated ? "Validé" : !isManager ? "Réservé au chef de projet" : ready ? "Valider" : "Valider (après les étoiles)";
   return (
-    <label className={`validate-box ${item.note.validated ? "on" : ""}`} title={title}>
-      <input type="checkbox" checked={item.note.validated} disabled={!isManager || busy || (!ready && !item.note.validated)}
+    <label className={`validate-box ${item.note.validated ? "on" : ""} ${!isManager ? "locked" : ""}`} title={isManager ? VALIDATE_HELP : "Réservé au chef de projet"}>
+      <input type="checkbox" checked={item.note.validated} disabled={!isManager || busy}
         onChange={(e) => onValidate(e.target.checked)} aria-label={`Valider la note de « ${item.name} »`} />
-      <span>{item.note.validated ? "Validé" : isManager ? "Valider" : "Non validé"}</span>
+      <span>{label}</span>
     </label>
   );
 }
 
 /** Éditeur déplié sous la tâche : type de problème, problème, résolution, puis évaluation par le chef de projet. */
-export function NoteEditor({ item, canEdit, isManager, busy, error, onSave, onRate, onValidate }: {
-  item: Item; canEdit: boolean; isManager: boolean; busy: boolean; error: string | null;
+export function NoteEditor({ item, canEdit, isManager, busy, error, needRating, onSave, onRate, onValidate }: {
+  item: Item; canEdit: boolean; isManager: boolean; busy: boolean; error: string | null; needRating?: boolean;
   onSave: (n: { problemType: ProblemType; problem: string; resolution: string }) => void;
   onRate: (n: number | null) => void;
   onValidate: (v: boolean) => void;
@@ -71,7 +74,14 @@ export function NoteEditor({ item, canEdit, isManager, busy, error, onSave, onRa
   const [problem, setProblem] = useState(item.note?.problem ?? "");
   const [resolution, setResolution] = useState(item.note?.resolution ?? "");
   const dirty = type !== (item.note?.problemType ?? "autre") || problem !== (item.note?.problem ?? "") || resolution !== (item.note?.resolution ?? "");
+  const [local, setLocal] = useState<string | null>(null);
   const id = item.id;
+  const save = () => {
+    if (problem.trim().length < 5) { setLocal("Décrivez le problème en quelques mots (5 caractères minimum) dans « Problème : que s'est-il passé ? »."); document.getElementById(`np-${id}`)?.focus(); return; }
+    if (!dirty) { setLocal("Aucun changement à enregistrer."); return; }
+    setLocal(null);
+    onSave({ problemType: type, problem: problem.trim(), resolution: resolution.trim() });
+  };
   return (
     <div className="note-editor">
       <div className="note-grid">
@@ -96,8 +106,7 @@ export function NoteEditor({ item, canEdit, isManager, busy, error, onSave, onRa
           {item.note?.validated ? ` · validée par ${item.note.validatedBy}` : item.note ? " · pas encore validée" : ""}
         </span>
         {canEdit && (
-          <button className="btn primary" disabled={busy || !dirty || problem.trim().length < 5}
-            onClick={() => onSave({ problemType: type, problem: problem.trim(), resolution: resolution.trim() })}>
+          <button className="btn primary" disabled={busy} onClick={save}>
             {item.note ? "Enregistrer la note" : "Ajouter la note"}
           </button>
         )}
@@ -106,12 +115,12 @@ export function NoteEditor({ item, canEdit, isManager, busy, error, onSave, onRa
       {item.note && (
         <div className="validate">
           <strong>Évaluation</strong>
-          <Stars value={item.note.rating} onRate={canEdit ? (n) => onRate(n) : undefined} disabled={busy} />
+          <span className={needRating ? "need" : ""}><Stars value={item.note.rating} onRate={canEdit ? (n) => onRate(n) : undefined} disabled={busy} /></span>
           <ValidateCell item={item} isManager={isManager} busy={busy} onValidate={onValidate} />
-          <span className="muted">{RATING_HELP}</span>
+          <span className="muted">{item.note.rating ? RATING_HELP : "Étape suivante : donnez une évaluation de 1 à 5 avec les étoiles, puis le chef de projet coche « Validé »."}</span>
         </div>
       )}
-      {error && <p className="card-error" role="alert">{error}</p>}
+      {(local || error) && <p className="card-error" role="alert">{local || error}</p>}
     </div>
   );
 }

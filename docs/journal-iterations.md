@@ -71,6 +71,19 @@ Il n'y a pas encore d'utilisateurs réels ni d'analytique. On mesure donc un **i
   - un éditeur ouvert dans un tableau défilant est coupé : il faut l'ouvrir sous le tableau ;
   - en test, une case pilotée par le serveur ne change qu'après sa réponse. Il faut attendre l'état confirmé, sur un serveur neuf à chaque essai : un clic de plus la décoche.
 
+### 5. Correctif : « Ajouter la note » et la case « Validé » semblaient ne pas fonctionner (retour de l'utilisateur)
+- **Cause :** rien n'était cassé côté code, mais rien n'expliquait les blocages :
+  - la case « Validé » restait **grisée sans raison visible** tant que la note n'avait pas d'étoiles. Le motif n'apparaissait qu'au survol, ce qui n'existe pas sur téléphone ;
+  - un texte trop court ne déclenchait qu'un message fugace (démo) ou un bouton grisé (application) ;
+  - sur téléphone, la visite guidée (267 px) pouvait recouvrir le bas du panneau.
+- **Correction :**
+  - la case n'est grisée que pour les non-chefs de projet, avec « Réservé au chef de projet » écrit à côté ;
+  - pour le chef de projet, cocher sans évaluation ouvre la note, explique quoi faire et met les étoiles en évidence ;
+  - le bouton « Ajouter la note » reste cliquable et affiche l'erreur dans le panneau, sans effacer le texte ;
+  - la visite est compacte sur téléphone (146 px) et la page réserve sa hauteur réelle.
+- **Vérifié :** parcours complet sur un téléphone simulé, dans la démo et dans l'application, jusqu'à l'enregistrement côté serveur.
+- **Appris :** une commande désactivée sans explication visible est perçue comme une panne. Il faut toujours dire pourquoi, à l'écran, et proposer l'étape suivante. Il faut aussi tester sur téléphone, car c'est là que l'utilisateur travaille.
+
 ## Prochaines pistes (non testées)
 
 - **Demander la note directement au responsable depuis le point du jour.** Un lien vers le formulaire de note, au lieu d'un simple message. À mesurer : délai entre le retard et la note validée.

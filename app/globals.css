@@ -242,3 +242,7 @@ table.wide{min-width:980px}
 .tmeta{display:block;font-size:12px;color:var(--muted);margin-top:2px}
 table.wide{min-width:820px}
 @media (min-width:981px){.layout{grid-template-columns:minmax(0,1fr) 340px}}
+.validate-box.locked span{font-size:12px}
+.need .stars button{animation:pulse 1.4s ease-in-out infinite;outline:2px solid var(--st-doing);outline-offset:1px;border-radius:4px}
+@keyframes pulse{50%{outline-color:transparent}}
+@media (prefers-reduced-motion:reduce){.need .stars button{animation:none}}

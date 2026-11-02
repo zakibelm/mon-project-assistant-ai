@@ -17,6 +17,7 @@ export default function ProjectView({ board, me, msgs, busy, onSend, onAssign, o
   const [open, setOpen] = useState<string | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState<{ id: string; text: string } | null>(null);
+  const [needRate, setNeedRate] = useState<string | null>(null);
   if (!board) return <p className="muted" style={{ padding: 24 }}>Chargement du projet…</p>;
   const isManager = !!board.members.find((m) => m.name === me)?.isManager;
   const run = async (id: string, fn: () => Promise<string | null>) => {
@@ -25,6 +26,17 @@ export default function ProjectView({ board, me, msgs, busy, onSend, onAssign, o
     if (err) setError({ id, text: err });
     setSaving(null);
   };
+  /** Cocher « Validé » sans évaluation : on ouvre la note et on explique quoi faire, au lieu d'une case grisée muette. */
+  const validate = (i: (typeof board.items)[number], v: boolean) => {
+    if (v && !i.note?.rating) {
+      setOpen(i.id); setNeedRate(i.id);
+      setError({ id: i.id, text: "Donnez d'abord une évaluation de 1 à 5 avec les étoiles, puis cochez « Validé »." });
+      return;
+    }
+    setNeedRate(null);
+    run(i.id, () => onValidate(i.id, v));
+  };
+  const rate = (id: string, n: number | null) => { setNeedRate(null); run(id, () => onRate(id, n)); };
   const pending = board.items.filter((i) => i.note && !i.note.validated).length;
   const expected = board.items.filter((i) => i.late && !i.note).length;
   return (
@@ -75,8 +87,8 @@ export default function ProjectView({ board, me, msgs, busy, onSend, onAssign, o
                           {i.baselineDue && i.due && i.due !== i.baselineDue && <span className="slip" title="Date du plan de référence"> (prévu {fmt(i.baselineDue)})</span>}
                         </td>
                         <td className="c-note"><NoteCell item={i} canEdit={canEdit} open={open === i.id} onToggle={() => setOpen(open === i.id ? null : i.id)} /></td>
-                        <td><RatingCell item={i} canEdit={canEdit} busy={saving === i.id} onRate={(n) => run(i.id, () => onRate(i.id, n))} /></td>
-                        <td><ValidateCell item={i} isManager={isManager} busy={saving === i.id} onValidate={(v) => run(i.id, () => onValidate(i.id, v))} /></td>
+                        <td><RatingCell item={i} canEdit={canEdit} busy={saving === i.id} onRate={(n) => rate(i.id, n)} /></td>
+                        <td><ValidateCell item={i} isManager={isManager} busy={saving === i.id} onValidate={(v) => validate(i, v)} /></td>
                       </tr>
                       </Fragment>
                       );
@@ -94,9 +106,9 @@ export default function ProjectView({ board, me, msgs, busy, onSend, onAssign, o
                   <div className="note-panel" role="region" aria-label={`Note de la tâche « ${i.name} »`}>
                     <div className="note-panel-head"><strong>Note · {i.name}</strong><button className="x" onClick={() => setOpen(null)} aria-label="Fermer la note">✕</button></div>
                     <NoteEditor key={`${i.id}-${i.note?.problem ?? ""}`} item={i} canEdit={canEdit} isManager={isManager} busy={saving === i.id}
-                      error={error?.id === i.id ? error.text : null}
-                      onSave={(n) => run(i.id, () => onSaveNote(i.id, n))} onRate={(n) => run(i.id, () => onRate(i.id, n))}
-                      onValidate={(v) => run(i.id, () => onValidate(i.id, v))} />
+                      error={error?.id === i.id ? error.text : null} needRating={needRate === i.id}
+                      onSave={(n) => run(i.id, () => onSaveNote(i.id, n))} onRate={(n) => rate(i.id, n)}
+                      onValidate={(v) => validate(i, v)} />
                   </div>
                 );
               })()}

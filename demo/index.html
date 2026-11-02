@@ -248,6 +248,19 @@ select.cell[data-empty="true"]{color:var(--st-block)}
 .tour .ctl{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .tour .btn.demo{background:var(--demo);border-color:var(--demo);color:#fff}
 .tour .mini{pointer-events:auto;margin:0 max(16px,env(safe-area-inset-right,0px)) 12px auto;display:block;border:2px solid var(--demo);background:var(--surface);color:var(--demo);font-weight:600;border-radius:999px;padding:8px 16px}
+.validate-box.locked span{font-size:12px}
+.need .stars button{animation:pulse 1.4s ease-in-out infinite;outline:2px solid var(--spot);outline-offset:1px;border-radius:4px}
+.note-err{margin:0;min-height:0;color:var(--st-block);font-size:13px;font-weight:500}
+.note-err:empty{display:none}
+@media (max-width:760px){
+  .tour .box{padding:10px 12px;gap:4px 10px;grid-template-columns:auto minmax(0,1fr)}
+  .tour .num{font-size:20px}
+  .tour h4{font-size:14px}
+  .tour p{font-size:13px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .tour p.full{display:block}
+  .tour .ctl{grid-column:1/-1;justify-content:stretch}
+  .tour .ctl .btn{flex:1;padding:6px 8px;font-size:13px}
+}
 .spot{outline:3px solid var(--spot) !important;outline-offset:3px;border-radius:10px;animation:pulse 1.4s ease-in-out infinite}
 @keyframes pulse{50%{outline-color:transparent}}
 @media (prefers-reduced-motion:reduce){.spot{animation:none}tr.flash td{animation:none}}
@@ -657,8 +670,9 @@ function ratingCell(p, t) {
 function validateCell(p, t) {
   if (!t.note) return `<span class="muted">—</span>`;
   const pm = isPM(p, ME), ready = !!t.note.rating;
-  const title = !pm ? "Réservé au chef de projet (lecture seule pour vous)" : !ready ? "Évaluez d'abord la note de 1 à 5." : VALIDATE_HELP;
-  return `<label class="validate-box ${t.note.validated ? "on" : ""}" title="${esc(title)}"><input type="checkbox" data-validate="${t.id}" ${t.note.validated ? "checked" : ""} ${!pm || (!ready && !t.note.validated) ? "disabled" : ""} aria-label="Valider la note de « ${esc(t.name)} »"><span>${t.note.validated ? "Validé" : pm ? "Valider" : "Non validé"}</span></label>`;
+  // La case n'est grisée que pour les non-chefs de projet, avec la raison écrite à côté (pas seulement au survol).
+  const label = t.note.validated ? "Validé" : !pm ? "Réservé au chef de projet" : ready ? "Valider" : "Valider (après les étoiles)";
+  return `<label class="validate-box ${t.note.validated ? "on" : ""} ${!pm ? "locked" : ""}" title="${esc(pm ? VALIDATE_HELP : "Réservé au chef de projet")}"><input type="checkbox" data-validate="${t.id}" ${t.note.validated ? "checked" : ""} ${!pm ? "disabled" : ""} aria-label="Valider la note de « ${esc(t.name)} »"><span>${label}</span></label>`;
 }
 function notePanel(p, t) {
   const n = t.note || { type: "autre", problem: "", resolution: "" }, edit = canEditNote(p, t);
@@ -670,7 +684,8 @@ function notePanel(p, t) {
     </div>
     <div class="note-foot"><span class="muted">${t.note ? `Note de ${esc(t.note.author)} · ${t.note.rating ? `évaluée ${t.note.rating}/5 par ${esc(t.note.ratedBy)}` : "pas encore évaluée"} · ${t.note.validated ? `validée par ${esc(t.note.validatedBy)}` : "pas encore validée"}` : edit ? "Rédigée par le responsable de la tâche (ou le chef de projet)." : "Seul le responsable de la tâche ou le chef de projet peut écrire la note."}</span>
       ${edit ? `<button class="btn primary" data-savenote="${t.id}">${t.note ? "Enregistrer la note" : "Ajouter la note"}</button>` : ""}</div>
-    ${t.note ? `<div class="validate"><strong>Évaluation</strong>${stars(t, edit)}${validateCell(p, t)}<span class="muted">${esc(RATING_HELP)}</span></div>` : ""}
+    <p class="note-err" id="note-err" role="alert">${S.noteError?.id === t.id ? esc(S.noteError.text) : ""}</p>
+    ${t.note ? `<div class="validate"><strong>Évaluation</strong><span class="${S.needRate === t.id ? "need" : ""}">${stars(t, edit)}</span>${validateCell(p, t)}<span class="muted">${!t.note.rating ? "Étape suivante : donnez une évaluation de 1 à 5 avec les étoiles, puis le chef de projet coche « Validé »." : esc(RATING_HELP)}</span></div>` : ""}
   </div>`;
 }
 function findTaskById(id) { for (const p of S.projects) { const t = p.tasks.find((x) => x.id === id); if (t) return [p, t]; } return [null, null]; }
@@ -798,18 +813,21 @@ document.addEventListener("click", (e) => {
   if (b.dataset.note) { S.noteOpen = S.noteOpen === b.dataset.note ? null : b.dataset.note; render(); $("#note-panel")?.scrollIntoView({ block: "nearest", behavior: "smooth" }); return; }
   if (b.dataset.rate) {
     const [p, t] = findTaskById(b.dataset.rate); if (!canEditNote(p, t)) return;
-    const n = +b.dataset.n; if (t.note.rating === n) return;
+    const n = +b.dataset.n; S.needRate = null; if (t.note.rating === n) return;
     const was = t.note.validated; Object.assign(t.note, { rating: n, ratedBy: ME, validated: false, validatedBy: null }); render();
     toast(was ? `Évaluée ${n}/5. La validation a été décochée : le chef de projet doit revalider.` : `Évaluée ${n}/5.`); return;
   }
   if (b.dataset.savenote) {
     const [p, t] = findTaskById(b.dataset.savenote); if (!canEditNote(p, t)) return;
     const type = $("#nt").value, problem = $("#np").value.trim(), resolution = $("#nr").value.trim();
-    if (problem.length < 5) { toast("Décrivez le problème en quelques mots."); return; }
-    const was = t.note?.validated, changed = !t.note || t.note.type !== type || t.note.problem !== problem || t.note.resolution !== resolution;
-    if (!changed) return;
+    // Erreurs affichées dans le panneau, sans effacer ce qui a été tapé.
+    const err = (text) => { const e = $("#note-err"); if (e) e.textContent = text; $("#np")?.focus(); };
+    if (problem.length < 5) { err("Décrivez le problème en quelques mots (5 caractères minimum) dans « Problème : que s'est-il passé ? »."); return; }
+    const was = t.note?.validated, isNew = !t.note, changed = isNew || t.note.type !== type || t.note.problem !== problem || t.note.resolution !== resolution;
+    if (!changed) { err("Aucun changement à enregistrer."); return; }
+    S.noteError = null;
     t.note = { ...(t.note || { rating: null, ratedBy: null }), type, problem, resolution, author: ME, validated: false, validatedBy: null };
-    S.flash = t.id; render(); toast(was ? "Note enregistrée. La validation a été décochée : le chef de projet doit revalider." : "Note enregistrée."); return;
+    S.flash = t.id; render(); toast(was ? "Note enregistrée. La validation a été décochée : le chef de projet doit revalider." : isNew ? "Note ajoutée. Étape suivante : évaluez-la de 1 à 5 avec les étoiles." : "Note enregistrée."); return;
   }
   if (b.id === "synth") { synthesize(); return; }
   if (b.dataset.undo) { const r = S.resolved[b.dataset.undo]; if (r?.undo) { r.undo(); delete S.resolved[b.dataset.undo]; render(); toast("Annulé."); } return; }
@@ -834,7 +852,13 @@ document.addEventListener("change", (e) => {
   if (el.id === "asuser") { ME = el.value; render(); toast(`Vous voyez l'outil comme ${ME}.`); return; }
   if (el.dataset.validate) {
     const [p, t] = findTaskById(el.dataset.validate);
-    if (!isPM(p, ME)) { el.checked = !el.checked; return; }
+    if (!isPM(p, ME)) { el.checked = !el.checked; toast("Seul le chef de projet peut valider."); return; }
+    if (el.checked && !t.note.rating) {
+      el.checked = false; S.needRate = t.id; S.noteOpen = t.id; render();
+      $("#note-panel")?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      toast("Donnez d'abord une évaluation de 1 à 5 avec les étoiles, puis cochez « Validé »."); return;
+    }
+    S.needRate = null;
     t.note.validated = el.checked; t.note.validatedBy = el.checked ? ME : null; render(); tourCheck();
     toast(el.checked ? "Note validée : elle comptera dans les leçons apprises." : "Validation retirée."); return;
   }
@@ -911,13 +935,21 @@ function renderTour() {
       <button class="btn demo" id="tour-next">${esc(s.next)}</button><button class="btn ghost" id="tour-close">Masquer</button></div></div></div>`;
   const target = s.spot && document.querySelector(s.spot);
   if (target) target.classList.add("spot");
+  reserveTourSpace();
 }
+/** Réserve en bas de page la hauteur réelle de la visite guidée, pour qu'elle ne recouvre jamais un bouton. */
+function reserveTourSpace() {
+  const h = $("#tour").getBoundingClientRect().height;
+  document.body.style.paddingBottom = `calc(${Math.ceil(h) + 24}px + env(safe-area-inset-bottom, 0px))`;
+}
+window.addEventListener("resize", reserveTourSpace);
 function tourCheck() {
   const s = TOUR[tourIdx];
   if (tourOpen && s?.done && s.done() && tourIdx < TOUR.length - 1) { tourIdx++; renderTour(); }
   else renderTour();
 }
 $("#tour").addEventListener("click", (e) => {
+  if (e.target.matches(".tour p")) { e.target.classList.toggle("full"); reserveTourSpace(); return; }
   const b = e.target.closest("button"); if (!b) return;
   if (b.id === "tour-open") { tourOpen = true; renderTour(); return; }
   if (b.id === "tour-close") { tourOpen = false; renderTour(); return; }
