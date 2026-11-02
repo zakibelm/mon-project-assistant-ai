@@ -85,7 +85,7 @@ export default function Home() {
       </header>
       <div className="page">
         {view === "today"
-          ? <Today brief={brief} onAct={act} onOpen={setView} onNew={() => setView("new")} />
+          ? <Today brief={brief} onAct={act} onOpen={setView} onNew={() => setView("new")} onChanged={loadBrief} />
           : view === "new"
           ? <NewProject onCancel={() => setView("today")} onCreated={async (id) => { await loadBrief(); setView(id); }} />
           : <ProjectView board={board} msgs={chats[view] ?? []} busy={busy} onSend={(t) => send(view, t)} onAssign={assign} />}

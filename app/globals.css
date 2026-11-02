@@ -169,3 +169,19 @@ select.cell[data-empty="true"]{color:var(--st-block)}
 select.owner{border:1px solid transparent;background:transparent;border-radius:6px;padding:4px 6px;margin:-4px -6px;color:var(--ink);font:inherit;font-size:14px;max-width:100%}
 select.owner:hover,select.owner:focus{border-color:var(--line);background:var(--bg)}
 select.owner[data-empty="true"]{color:var(--st-block)}
+
+/* résolution sur place dans le point du jour */
+.card .resolve,.card .ai-link,.card .card-error{grid-column:1/-1}
+.resolve{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;background:var(--sunken);border-radius:8px;padding:10px 12px}
+.resolve label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.resolve input[type="date"]{border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--surface);color:var(--ink);font:inherit}
+.resolve.list{flex-direction:column;align-items:stretch;gap:6px}
+.rrow{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.rname{min-width:0;flex:1 1 260px;font-size:14px}
+.rrow select{border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--surface);color:var(--ink);font:inherit;font-size:14px;min-width:150px}
+.ai-link{justify-self:start;border:0;background:transparent;color:var(--accent);font-size:13px;padding:0;text-decoration:underline;text-underline-offset:2px}
+.card-error{margin:0;color:var(--st-block);font-size:13px}
+.card.resolved{opacity:.85}
+.card.resolved .stripe{background:var(--st-done)}
+.card.resolved .kind{color:var(--st-done)}
+.done-line{margin:2px 0 0;font-size:14px;color:var(--ink)}

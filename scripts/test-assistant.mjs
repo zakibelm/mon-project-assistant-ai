@@ -79,6 +79,13 @@ try {
   assert.equal(brief.user, "Zaki");
   assert.ok(brief.items.some((i) => i.kind === "blocked"), "le blocage du seed est signalé");
   assert.equal(brief.pulse.length, 2);
+  // Le point du jour transporte de quoi résoudre sur place : la tâche et l'équipe de son projet
+  const blockedItem = brief.items.find((i) => i.kind === "blocked");
+  assert.equal(blockedItem.task.owner, "Sami");
+  assert.deepEqual(blockedItem.task.team, ["Inès", "Léa", "Sami", "Zaki"]);
+  const overload = brief.items.find((i) => i.kind === "overload");
+  assert.equal(overload.tasks.length, 4);
+  assert.ok(overload.tasks.every((t) => t.team.includes("Sami")));
 
   // 1. Planification avec outils
   const r1 = await ask("Planifie un événement client");
@@ -158,6 +165,25 @@ try {
   assert.equal(a3.data.board.items.find((i) => i.id === photos.id).owner, null);
   assert.equal((await patch("inconnue", { owner: null })).status, 404);
 
+  // 1 quater. Résolution sur place depuis le point du jour : statut, échéance, relance, sans IA
+  const before = seen.length;
+  const ssl = site.board.items.find((i) => i.name.startsWith("Configurer le nom de domaine"));
+  const q1 = await patch(ssl.id, { owner: "Zaki", status: "doing" });
+  assert.equal(q1.status, 200);
+  const b2 = await fetch(base + "/api/brief").then((r) => r.json());
+  assert.ok(!b2.items.some((i) => i.kind === "blocked"), "le blocage disparaît du point du jour");
+  const q2 = await patch(ssl.id, { due: "2026-11-06" });
+  assert.equal(q2.data.board.items.find((i) => i.id === ssl.id).baselineDue, "2026-11-04", "le plan de référence est conservé");
+  assert.equal((await patch(ssl.id, { due: "06/11/2026" })).status, 400);
+  assert.equal((await patch(ssl.id, {})).status, 400);
+  await patch(ssl.id, { owner: "Sami", status: "block", due: "2026-11-04" }); // annulation
+  const c = await fetch(`${base}/api/tasks/${ssl.id}/comments`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ body: "@Sami où en es-tu ?" }) });
+  assert.equal(c.status, 201);
+  const sb = await fetch(base + "/api/projects/prj_site").then((r) => r.json());
+  assert.equal(sb.board.items.find((i) => i.id === ssl.id).comments.at(-1).text, "@Sami où en es-tu ?");
+  assert.match(sb.board.notifications[0].text, /Sami a été mentionné/);
+  assert.equal(seen.length, before, "aucun appel d'IA pour résoudre sur place");
+
   // 2. Refus du filtre de sécurité
   scenario = "refusal";
   const r2 = await ask("…");
@@ -176,7 +202,7 @@ try {
   const r5 = await fetch(base + "/api/assistant", { method: "POST", body: JSON.stringify({ projectId: "inconnu", message: "x" }) });
   assert.equal(r5.status, 404);
 
-  console.log("OK : 8 scénarios passés (point du jour, nouveau projet, responsable, planification avec outils et historique, refus, clé refusée, requête invalide, projet inconnu)");
+  console.log("OK : 9 scénarios passés (point du jour, nouveau projet, responsable, résolution sur place, planification avec outils et historique, refus, clé refusée, requête invalide, projet inconnu)");
 } catch (e) {
   console.error(e.message, "\n--- logs app ---\n", logs.slice(-2000));
   process.exitCode = 1;

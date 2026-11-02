@@ -104,6 +104,19 @@ main{padding-bottom:40px}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .btn.ghost{border-color:transparent;color:var(--muted);background:transparent}
 .btn:disabled{opacity:.55;cursor:default}
+.card .resolve,.card .ai-link{grid-column:1/-1}
+.resolve{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;background:var(--sunken);border-radius:8px;padding:10px 12px}
+.resolve label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.resolve input[type="date"]{border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--surface);color:var(--ink)}
+.resolve.list{flex-direction:column;align-items:stretch;gap:6px}
+.rrow{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.rname{min-width:0;flex:1 1 240px;font-size:14px}
+.rrow select{border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--surface);color:var(--ink);font-size:14px;min-width:150px}
+.ai-link{justify-self:start;border:0;background:transparent;color:var(--accent);font-size:13px;padding:0;text-decoration:underline;text-underline-offset:2px}
+.card.resolved{opacity:.9}
+.card.resolved .stripe{background:var(--st-done)}
+.card.resolved .kind{color:var(--st-done)}
+.done-line{margin:2px 0 0;font-size:14px;color:var(--ink) !important}
 .empty{background:var(--surface);border:1px dashed var(--line);border-radius:var(--r);padding:24px;text-align:center;color:var(--muted)}
 
 /* vue projet */
@@ -229,7 +242,7 @@ function T(group, name, status, owner, due, prio, subs, comments) {
 }
 function seed() {
   return {
-    view: "today", handled: [], chats: {}, newStep: "text", draft: null, intake: "",
+    view: "today", handled: [], resolved: {}, open: null, dates: {}, chats: {}, newStep: "text", draft: null, intake: "",
     projects: [
       { id: "site", name: "Lancement du site web", example: true,
         description: "Refonte et mise en ligne du site vitrine d'une agence, avec pages services et formulaire de contact.",
@@ -274,7 +287,7 @@ function brief() {
   const open = [];
   for (const p of S.projects) for (const t of p.tasks) if (t.status !== "done") open.push([p, t]);
   for (const [p, t] of open) {
-    const base = { pid: p.id, project: p.name };
+    const base = { pid: p.id, project: p.name, task: t, team: p.team.map((m) => m[0]) };
     if (t.status === "block") {
       const last = t.comments.at(-1);
       items.push({ ...base, id: "blocked:" + t.id, kind: "Bloqué", sev: 3, title: `« ${t.name} » est bloquée`,
@@ -304,7 +317,7 @@ function brief() {
     const projs = [...new Set(list.map(([p]) => p.name))];
     items.push({ pid: list[0][0].id, project: projs.join(" · "), id: "load:" + who, kind: "Surcharge", sev: projs.length > 1 ? 2 : 1,
       title: `${who} porte ${list.length} tâches ouvertes${projs.length > 1 ? ` sur ${projs.length} projets` : ""}`,
-      detail: list.map(([, t]) => t.name).join(" · "), actions: [["Proposer un rééquilibrage", "rebalance", who]] });
+      detail: list.map(([, t]) => t.name).join(" · "), actions: [["Proposer un rééquilibrage", "rebalance", who]], tasks: list });
   }
   for (const p of S.projects) for (const [name, due] of p.deliverables) {
     if (!due || due < TODAY || days(TODAY, due) > 14) continue;
@@ -312,7 +325,7 @@ function brief() {
     if (!n) continue;
     items.push({ pid: p.id, project: p.name, id: "deliv:" + p.id + name, kind: "Livrable", sev: days(TODAY, due) <= 5 ? 3 : 2,
       title: `Livrable « ${name} » dans ${days(TODAY, due)} jours`, detail: `${n} tâche(s) encore ouverte(s) avant le ${fmt(due)}.`,
-      actions: [["Est-ce tenable ?", "feasible", name]] });
+      actions: [["Est-ce tenable ?", "feasible", name]], tasks: p.tasks.filter((t) => t.status !== "done" && (!t.due || t.due <= due)).map((t) => [p, t]) });
   }
   items.sort((a, b) => b.sev - a.sev);
   return items;
@@ -465,14 +478,81 @@ function renderNav() {
     `<button class="new" data-go="new" ${S.view === "new" ? 'aria-current="page"' : ""} id="nav-new">+ Nouveau projet</button>`;
 }
 
+/* ------------------------------------------------------------ résolution sur place (sans IA) */
+const ME = "Zaki";
+function quickButtons(i) {
+  const t = i.task, b = (q, label, primary) => `<button class="btn ${primary ? "primary" : ""}" data-q="${q}" data-item="${esc(i.id)}">${esc(label)}</button>`;
+  const canTake = t && i.team.includes(ME) && t.owner !== ME;
+  const date = t ? b("date", S.open === i.id ? "Fermer" : "Nouvelle date") : "";
+  switch (i.kind) {
+    case "Bloqué": return (canTake ? b("take", "Je m'en occupe", true) : "") + b("unblock", "C'est débloqué", !canTake) + date + (t.owner && t.owner !== ME ? b("nudge", `Relancer ${t.owner}`) : "");
+    case "En retard": return b("done", "C'est terminé", true) + date + (t.owner && t.owner !== ME ? b("why", "Demander la cause") : "");
+    case "Échéance proche": return b("start", "Marquer En cours", true) + (t.owner && t.owner !== ME ? b("nudge", `Vérifier avec ${t.owner}`) : "") + date;
+    case "Glissement": return b("ack", "Accepter le glissement", true) + date;
+    case "Surcharge": return b("open", S.open === i.id ? "Fermer" : "Rééquilibrer", true);
+    case "Livrable": return b("open", S.open === i.id ? "Fermer" : "Voir les tâches", true);
+  }
+  return "";
+}
+function quickPanel(i) {
+  if (S.open !== i.id) return "";
+  if (i.task) {
+    const t = i.task, v = S.dates[i.id] || t.due;
+    return `<div class="resolve"><label>Nouvelle échéance pour « ${esc(t.name)} »<input type="date" id="due-${esc(i.id)}" data-due="${esc(i.id)}" value="${v}" min="${TODAY}"></label>
+      <button class="btn primary" data-q="setdate" data-item="${esc(i.id)}">Valider</button></div>`;
+  }
+  return `<div class="resolve list">${i.tasks.map(([p, t]) => `<div class="rrow"><span class="rname">${esc(t.name)}<span class="muted"> · ${ST[t.status][0]} · ${fmt(t.due)}${i.kind === "Surcharge" ? " · " + esc(p.name) : ""}</span></span>
+      <select data-reassign="${t.id}" data-item="${esc(i.id)}" aria-label="Responsable de « ${esc(t.name)} »"><option value="">— à assigner</option>${p.team.map(([m]) => `<option ${m === t.owner ? "selected" : ""}>${esc(m)}</option>`).join("")}</select></div>`).join("")}
+    <p class="muted" style="margin:0">Choisir un autre membre de l'équipe du projet applique le changement tout de suite.</p></div>`;
+}
+function resolveItem(item, summary, undo) {
+  S.resolved[item.id] = { item, summary, undo }; S.open = null;
+  setTimeout(() => { if (S.resolved[item.id]) { delete S.resolved[item.id]; if (S.view === "today") render(); } }, 12000);
+  render(); tourCheck();
+}
+function change(item, t, patch, summary) {
+  const before = {}; for (const k in patch) before[k] = t[k];
+  Object.assign(t, patch); S.flash = t.id;
+  resolveItem(item, summary, () => Object.assign(t, before));
+}
+function quick(q, id, value) {
+  const item = brief().find((x) => x.id === id) || S.resolved[id]?.item; if (!item) return;
+  const t = item.task;
+  if (q === "take") change(item, t, { owner: ME, status: "doing" }, `Vous reprenez « ${t.name} », passée En cours.`);
+  else if (q === "unblock" || q === "start") change(item, t, { status: "doing" }, `« ${t.name} » est passée En cours.`);
+  else if (q === "done") change(item, t, { status: "done" }, `« ${t.name} » est marquée Terminée.`);
+  else if (q === "nudge" || q === "why") {
+    t.comments.push([ME, q === "why" ? `@${t.owner} qu'est-ce qui a retardé « ${t.name} », et quelle nouvelle date te paraît réaliste ? (pas de reproche : c'est pour mieux planifier)` : `@${t.owner} où en es-tu sur « ${t.name} » ? De quoi as-tu besoin pour avancer ?`]);
+    resolveItem(item, `Relance envoyée à ${t.owner} dans le fil de la tâche.`);
+  }
+  else if (q === "ack") { S.handled.push(id); render(); }
+  else if (q === "date" || q === "open") { S.open = S.open === id ? null : id; render(); }
+  else if (q === "setdate") { const v = S.dates[id] || t.due; if (v && v !== t.due) change(item, t, { due: v }, `Échéance de « ${t.name} » passée au ${fmt(v)}. L'écart avec le plan de référence reste visible.`); }
+  else if (q === "reassign") {
+    const [p, task] = item.tasks.find(([, x]) => x.id === value.task);
+    change(item, task, { owner: value.owner || null }, `« ${task.name} » est confiée à ${value.owner || "personne"}.`);
+  }
+}
+
 function renderToday() {
-  const items = brief().filter((i) => !S.handled.includes(i.id));
+  const live = brief().filter((i) => !S.handled.includes(i.id) && !S.resolved[i.id]);
+  const items = [...live, ...Object.values(S.resolved).map((r) => r.item)].sort((a, b) => b.sev - a.sev);
   const urgent = items.filter((i) => i.sev === 3), later = items.filter((i) => i.sev < 3);
-  const head = urgent.length ? `${urgent.length} point${urgent.length > 1 ? "s" : ""} à traiter aujourd'hui, ${later.length} à surveiller.` : later.length ? `Rien d'urgent. ${later.length} point(s) à surveiller cette semaine.` : "Rien ne demande votre attention aujourd'hui.";
-  const card = (i) => `<article class="card" data-sev="${i.sev}" id="card-${esc(i.id)}"><div class="stripe"></div><div class="body">
+  const lu = live.filter((i) => i.sev === 3).length, ll = live.length - lu;
+  const head = !live.length && Object.keys(S.resolved).length ? "Vous avez traité tous les points du jour." : lu ? `${lu} point${lu > 1 ? "s" : ""} à traiter aujourd'hui, ${ll} à surveiller.` : ll ? `Rien d'urgent. ${ll} point(s) à surveiller cette semaine.` : "Rien ne demande votre attention aujourd'hui.";
+  const card = (i) => {
+    const r = S.resolved[i.id];
+    if (r) return `<article class="card resolved" data-sev="${i.sev}" id="card-${esc(i.id)}"><div class="stripe"></div><div class="body">
+      <div style="min-width:0"><div class="meta"><span class="kind">✓ Réglé</span><span>· ${esc(i.project)}</span></div><p class="done-line">${esc(r.summary)}</p></div>
+      <div class="acts">${r.undo ? `<button class="btn ghost" data-undo="${esc(i.id)}">Annuler</button>` : ""}</div></div></article>`;
+    const [label, kind, arg] = i.actions[0];
+    return `<article class="card" data-sev="${i.sev}" id="card-${esc(i.id)}"><div class="stripe"></div><div class="body">
       <div style="min-width:0"><div class="meta"><span class="kind">${i.kind}</span><span>· ${esc(i.project)}</span></div><h3>${esc(i.title)}</h3><p>${esc(i.detail)}</p></div>
-      <div class="acts">${i.actions.map(([label, kind, arg], k) => `<button class="btn ${k === 0 ? "primary" : ""}" data-act="${kind}" data-arg="${esc(arg)}" data-pid="${i.pid}" data-item="${esc(i.id)}">${esc(label)}</button>`).join("")}
-      <button class="btn ghost" data-later="${esc(i.id)}">Plus tard</button></div></div></article>`;
+      <div class="acts">${quickButtons(i)}<button class="btn ghost" data-later="${esc(i.id)}">Plus tard</button></div>
+      ${quickPanel(i)}
+      <button class="ai-link" data-act="${kind}" data-arg="${esc(arg)}" data-pid="${i.pid}" data-item="${esc(i.id)}">Ou demander à l'assistant : « ${esc(label)} »</button>
+    </div></article>`;
+  };
   return `<section class="hero" id="hero">
       <div class="date">Lundi 2 novembre · date de la démo</div>
       <h1>Bonjour Zaki.</h1>
@@ -570,6 +650,8 @@ document.addEventListener("click", (e) => {
     window.scrollTo({ top: 0 });
     runAction(b.dataset.act, b.dataset.arg, b.dataset.pid); render(); tourCheck(); return;
   }
+  if (b.dataset.q) { quick(b.dataset.q, b.dataset.item); return; }
+  if (b.dataset.undo) { const r = S.resolved[b.dataset.undo]; if (r?.undo) { r.undo(); delete S.resolved[b.dataset.undo]; render(); toast("Annulé."); } return; }
   if (b.dataset.later) { S.handled.push(b.dataset.later); render(); toast("Masqué jusqu'à demain."); return; }
   if (b.id === "unhide") { S.handled = []; render(); return; }
   if (b.dataset.cycle) { for (const p of S.projects) { const t = p.tasks.find((x) => x.id === b.dataset.cycle); if (t) { t.status = NEXT[t.status]; S.flash = null; } } render(); return; }
@@ -588,6 +670,8 @@ document.addEventListener("input", (e) => {
 });
 document.addEventListener("change", (e) => {
   const el = e.target;
+  if (el.dataset.due) { S.dates[el.dataset.due] = el.value; return; }
+  if (el.dataset.reassign) { quick("reassign", el.dataset.item, { task: el.dataset.reassign, owner: el.value }); return; }
   if (el.dataset.owner) {
     const t = P(S.view).tasks.find((x) => x.id === el.dataset.owner);
     t.owner = el.value || null; S.flash = t.id; render();
@@ -617,18 +701,15 @@ const TOUR = [
   { title: "Voici l'outil : notre Monday.com", spot: "#hero",
     text: "Ceci est la page d'accueil d'Assistant Projet, l'outil de gestion de projet qu'on construit. Au lieu d'un tableau à lire, l'assistant vous dit ce qui demande une décision aujourd'hui, sur tous vos projets. Les projets « Site web » et « CRM » sont des exemples, pour la démonstration.",
     next: "Voir les cartes", act: () => { const c = document.querySelector('[id^="card-blocked"]'); c?.scrollIntoView({ block: "center", behavior: "smooth" }); } },
-  { title: "Une carte = une décision à prendre", spot: '[id^="card-blocked"]',
-    text: "L'assistant a repéré une tâche bloquée, avec le dernier message de Sami. Chaque carte propose des actions. Cliquez sur « Relancer Sami » : l'assistant va écrire la relance pour vous.",
-    next: "Relancer Sami pour moi", done: () => S.view === "site" && (S.chats.site || []).some((m) => m.did),
-    act: () => {
-      const t = P("site").tasks.find((x) => x.status === "block"); if (!t) return;
-      S.handled.push("blocked:" + t.id); S.view = "site"; window.scrollTo({ top: 0 }); runAction("nudge", t.id, "site"); render();
-    } },
-  { title: "Avant / après : l'assistant a agi dans le projet", spot: "#chat",
-    text: "Vous êtes dans le projet. À droite, l'assistant confirme ce qu'il a fait. Dans le tableau, le commentaire apparaît sous la tâche du SSL (ligne surlignée). Vous pouvez aussi lui poser une question ou cliquer sur un statut pour le changer.",
-    next: "Revenir à Aujourd'hui", done: () => S.view === "today", act: () => go("today") },
-  { title: "Le point du jour se met à jour", spot: "#pulse",
-    text: "La carte traitée a disparu de la liste. L'avancement de chaque projet est comparé au rythme attendu (le trait noir). Prochaine étape : créer un projet à partir d'un simple texte.",
+  { title: "Une carte = une décision, réglée sur place", spot: '[id^="card-blocked"]',
+    text: "L'assistant a repéré une tâche bloquée, avec le dernier message de Sami. Chaque carte propose des actions directes. Cliquez sur « Je m'en occupe » : la tâche vous est assignée et passe En cours, sans quitter la page et sans attendre l'IA.",
+    next: "Je m'en occupe", done: () => P("site").tasks.some((t) => t.name.startsWith("Configurer") && t.owner === ME),
+    act: () => { const i = brief().find((x) => x.kind === "Bloqué"); if (i) quick("take", i.id); } },
+  { title: "Avant / après, sans changer d'écran", spot: ".card.resolved",
+    text: "La carte affiche « ✓ Réglé », avec « Annuler » pendant quelques secondes. Le point du jour s'est recalculé : en reprenant cette tâche, c'est vous qui portez maintenant 4 tâches, et l'outil le signale aussitôt dans « À surveiller ». Le lien « Ou demander à l'assistant » reste là quand vous voulez une analyse.",
+    next: "Voir le projet", done: () => S.view === "site", act: () => go("site") },
+  { title: "Le changement est enregistré dans le projet", spot: ".layout .group",
+    text: "Dans le tableau du projet, la tâche du SSL est à votre nom, au statut En cours (ligne surlignée). Les responsables se choisissent dans la liste des membres de l'équipe. Prochaine étape : créer un projet à partir d'un simple texte.",
     next: "Créer un projet", done: () => S.view === "new", act: () => go("new") },
   { title: "Créer un projet en collant un texte", spot: ".intake-box, #loading",
     text: "On colle un brief, un courriel ou des notes. Utilisez l'exemple (un déménagement de bureaux), puis « Préparer le projet ». L'assistant en tire les dates, les livrables, l'équipe et un plan.",

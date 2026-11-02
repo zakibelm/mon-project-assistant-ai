@@ -15,6 +15,14 @@ export type BriefAction =
   | { type: "ask"; label: string; projectId: string; prompt: string }
   | { type: "open"; label: string; projectId: string };
 
+/** Tâche visée par un point, avec l'équipe de son projet : de quoi la résoudre sur place. */
+export interface BriefTask {
+  id: string; name: string; projectId: string; owner: string | null; due: string | null;
+  status: "todo" | "doing" | "block" | "done";
+  /** Membres de l'équipe du projet de la tâche (choix possibles de responsable). */
+  team: string[];
+}
+
 export interface BriefItem {
   id: string;
   kind: BriefKind;
@@ -25,6 +33,10 @@ export interface BriefItem {
   title: string;
   detail: string;
   actions: BriefAction[];
+  /** Tâche concernée (blocage, retard, échéance, glissement). */
+  task?: BriefTask;
+  /** Tâches concernées (surcharge, livrable). */
+  tasks?: BriefTask[];
 }
 
 export interface ProjectPulse {
@@ -57,25 +69,34 @@ export async function computeBrief(db: Db, orgId: string, user: string, today = 
   const pname = new Map(projects.map((p) => [p.id, p.name]));
   if (!ids.length) return { today, user, headline: "Aucun projet actif.", items: [], pulse: [] };
 
-  const [tasks, members, deliverables, lastComments] = await Promise.all([
+  const [tasks, members, deliverables, lastComments, teamRows] = await Promise.all([
     db.select().from(s.tasks).where(inArray(s.tasks.projectId, ids)),
     db.select({ id: s.members.id, name: s.members.displayName }).from(s.members).where(eq(s.members.orgId, orgId)),
     db.select().from(s.deliverables).where(inArray(s.deliverables.projectId, ids)),
     db.select({ taskId: s.comments.taskId, body: s.comments.body, at: s.comments.createdAt })
       .from(s.comments).innerJoin(s.tasks, eq(s.tasks.id, s.comments.taskId))
       .where(inArray(s.tasks.projectId, ids)).orderBy(desc(s.comments.createdAt)),
+    db.select({ projectId: s.projectMembers.projectId, name: s.members.displayName })
+      .from(s.projectMembers).innerJoin(s.members, eq(s.members.id, s.projectMembers.memberId))
+      .where(inArray(s.projectMembers.projectId, ids)),
   ]);
+  const teamOf = new Map<string, string[]>();
+  for (const r of teamRows) teamOf.set(r.projectId, [...(teamOf.get(r.projectId) ?? []), r.name].sort((a, b) => a.localeCompare(b, "fr")));
   const who = new Map(members.map((m) => [m.id, m.name]));
   const lastComment = new Map<string, string>();
   for (const c of lastComments) if (!lastComment.has(c.taskId)) lastComment.set(c.taskId, c.body);
 
   const items: BriefItem[] = [];
   const open = tasks.filter((t) => t.status !== "done");
+  const view = (t: (typeof tasks)[number]): BriefTask => ({
+    id: t.id, name: t.name, projectId: t.projectId, owner: t.ownerId ? who.get(t.ownerId) ?? null : null,
+    due: t.dueDate, status: t.status, team: teamOf.get(t.projectId) ?? [],
+  });
 
   for (const t of open) {
     const owner = t.ownerId ? who.get(t.ownerId) ?? "—" : "personne";
     const project = pname.get(t.projectId)!;
-    const base = { projectId: t.projectId, projectName: project };
+    const base = { projectId: t.projectId, projectName: project, task: view(t) };
 
     if (t.status === "block") {
       const said = lastComment.get(t.id);
@@ -138,7 +159,7 @@ export async function computeBrief(db: Db, orgId: string, user: string, today = 
     const projs = [...new Set(list.map((t) => t.projectId))];
     const name = who.get(ownerId) ?? "—";
     items.push({
-      id: `overload:${ownerId}`, kind: "overload", severity: projs.length > 1 ? 2 : 1,
+      id: `overload:${ownerId}`, kind: "overload", severity: projs.length > 1 ? 2 : 1, tasks: list.map(view),
       projectId: projs[0], projectName: projs.map((p) => pname.get(p)).join(" · "),
       title: `${name} porte ${list.length} tâches ouvertes${projs.length > 1 ? ` sur ${projs.length} projets` : ""}`,
       detail: list.slice(0, 4).map((t) => t.name).join(" · ") + (list.length > 4 ? "…" : ""),
@@ -155,6 +176,7 @@ export async function computeBrief(db: Db, orgId: string, user: string, today = 
     const left = days(today, d.dueDate);
     items.push({
       id: `deliv:${d.id}`, kind: "deliverable", severity: left <= 5 ? 3 : 2,
+      tasks: open.filter((t) => t.projectId === d.projectId && (!t.dueDate || t.dueDate <= d.dueDate!)).map(view),
       projectId: d.projectId, projectName: pname.get(d.projectId)!,
       title: `Livrable « ${d.name} » dans ${left} jour${left > 1 ? "s" : ""}`,
       detail: `${remaining} tâche${remaining > 1 ? "s" : ""} encore ouverte${remaining > 1 ? "s" : ""} avant le ${fmt(d.dueDate)}.`,

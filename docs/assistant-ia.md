@@ -24,7 +24,7 @@ Il ne fait encore rien de lui-même : pas de suivi quotidien, de relances ni de 
 | Surcharge | Une personne avec 4 tâches ouvertes ou plus, tous projets confondus | Cette semaine si plusieurs projets |
 | Livrable | Livrable dans 14 jours ou moins avec des tâches ouvertes | Aujourd'hui si 5 jours ou moins |
 
-Chaque point propose des actions. Une action ouvre le projet et envoie à l'assistant une consigne déjà rédigée, par exemple « Ajoute un commentaire courtois pour relancer Sami… ». Les consignes qui pourraient modifier beaucoup de choses, comme le rééquilibrage de charge, demandent explicitement de ne rien modifier sans accord.
+Chaque point se règle d'abord **sur place, sans IA** : reprendre la tâche, la débloquer, la terminer, changer sa date, la réassigner dans l'équipe du projet, ou relancer le responsable. La carte affiche alors « ✓ Réglé » avec « Annuler ». En option, le lien « Ou demander à l'assistant » ouvre le projet et envoie à l'assistant une consigne déjà rédigée, par exemple « Ajoute un commentaire courtois pour relancer Sami… ». Les consignes qui pourraient modifier beaucoup de choses, comme le rééquilibrage de charge, demandent explicitement de ne rien modifier sans accord.
 
 Le « rythme » d'un projet compare la part des tâches terminées à la part du temps écoulé entre le début et la fin du projet.
 

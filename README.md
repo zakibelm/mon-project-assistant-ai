@@ -8,7 +8,7 @@ Documentation : voir [`docs/README.md`](docs/README.md) (charte du projet, visio
 
 ![Point du jour](docs/images/aujourdhui.png)
 
-L'application s'ouvre sur le point du jour, pas sur un tableau. L'assistant présente ce qui demande une décision sur tout le portefeuille : blocages, retards, échéances proches, glissements, surcharges, livrables proches. Chaque point a des actions en un clic qui ouvrent le projet et confient la suite à l'assistant. Le point est calculé directement depuis la base (`lib/brief.ts`) : il s'affiche instantanément et ne coûte rien en IA.
+L'application s'ouvre sur le point du jour, pas sur un tableau. L'assistant présente ce qui demande une décision sur tout le portefeuille : blocages, retards, échéances proches, glissements, surcharges, livrables proches. Chaque point se règle sur place, sans quitter la page ni attendre l'IA : « Je m'en occupe », nouvelle date, réassignation dans l'équipe du projet, relance… avec « Annuler ». L'assistant reste disponible pour une analyse. Le point est calculé directement depuis la base (`lib/brief.ts`) : il s'affiche instantanément et ne coûte rien en IA.
 
 ## Nouveau projet : du brief au plan en une étape
 
@@ -52,7 +52,8 @@ Documentation complète : `docs/assistant-ia.md`.
 | `POST /api/projects` | `{ draft }` → crée le projet relu ; les échéances deviennent le plan de référence |
 | `GET /api/projects` | Portefeuille : projets et indicateurs (terminées, en retard, bloquées, glissées) |
 | `GET /api/projects/:id` | Tableau d'un projet |
-| `PATCH /api/tasks/:id` | `{ owner }` → change le responsable (un membre de l'équipe du projet, ou `null`) |
+| `PATCH /api/tasks/:id` | `{ owner?, status?, due? }` → modifie la tâche (responsable limité à l'équipe du projet), journalisé |
+| `POST /api/tasks/:id/comments` | `{ body }` → message dans le fil de la tâche (les @mentions notifient) |
 | `GET /api/tasks/:id/history` | Historique d'une tâche |
 | `POST /api/assistant` | `{ projectId, message, history }` |
 
