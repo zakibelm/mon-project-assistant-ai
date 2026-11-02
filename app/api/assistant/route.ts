@@ -3,14 +3,15 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { runAssistant } from "@/lib/ai/assistant";
 import { MissingKeyError } from "@/lib/ai/client";
-import { checkAndCount, getUsage, recordTokens } from "@/lib/ai/quota";
-import { getBoard } from "@/lib/board/store";
+import { getDb } from "@/lib/db/client";
+import { countAiRequest, getAiUsage, getBoard, recordAiTokens } from "@/lib/db/repo";
+import { currentSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
 const Body = z.object({
-  boardId: z.string().default("board_site"),
+  projectId: z.string().min(1),
   message: z.string().trim().min(1).max(4000),
   history: z.array(z.object({ role: z.enum(["user", "assistant"]), text: z.string().max(8000) })).max(40).default([]),
 });
@@ -18,24 +19,23 @@ const Body = z.object({
 export async function POST(req: Request) {
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Requête invalide." }, { status: 400 });
-  const { boardId, message, history } = parsed.data;
+  const { projectId, message, history } = parsed.data;
 
-  const board = getBoard(boardId);
-  if (!board) return NextResponse.json({ error: "Board introuvable." }, { status: 404 });
+  const db = await getDb();
+  const { orgId, user } = await currentSession(db);
+  const board = await getBoard(db, projectId);
+  if (!board || board.orgId !== orgId) return NextResponse.json({ error: "Projet introuvable." }, { status: 404 });
 
-  // TODO auth : l'utilisateur viendra de la session. En attendant, premier membre.
-  const user = board.members[0];
-
-  const quota = checkAndCount(board.workspaceId);
+  const quota = await countAiRequest(db, orgId, Number(process.env.AI_DAILY_LIMIT || 200));
   if (!quota.ok) {
     return NextResponse.json({ error: `Limite quotidienne atteinte (${quota.limit} demandes). Elle se réinitialise demain.` }, { status: 429 });
   }
 
   try {
-    const result = await runAssistant(board, user, history, message);
-    recordTokens(board.workspaceId, result.usage);
-    console.info("[assistant]", JSON.stringify({ workspace: board.workspaceId, ...result.usage, actions: result.actions.length }));
-    return NextResponse.json({ ...result, board, usage: getUsage(board.workspaceId) });
+    const result = await runAssistant(db, board, user, history, message);
+    await recordAiTokens(db, orgId, result.usage);
+    console.info("[assistant]", JSON.stringify({ org: orgId, project: projectId, ...result.usage, actions: result.actions.length }));
+    return NextResponse.json({ ...result, board: await getBoard(db, projectId), usage: await getAiUsage(db, orgId) });
   } catch (e) {
     return NextResponse.json({ error: errorMessage(e) }, { status: errorStatus(e) });
   }

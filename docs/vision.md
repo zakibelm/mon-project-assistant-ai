@@ -89,7 +89,7 @@ L'IA apprend de la cause retenue, pondérée par ce poids : une explication not�
 
 | Phase | Contenu | Résultat vérifiable |
 |---|---|---|
-| A. Base de données | PostgreSQL (PGlite en développement et en tests, PostgreSQL sur le VPS ou un service géré en production), accès via Drizzle ; modèle multi-projets (organisation, portefeuille, projets, membres partagés) ; historique des changements de statut et de date | Les données survivent au redémarrage ; on sait quand chaque tâche a changé ; deux projets coexistent dans la même organisation |
+| A. Base de données ✅ | PostgreSQL (PGlite en développement et en tests, PostgreSQL sur le VPS ou un service géré en production), accès via Drizzle ; modèle multi-projets (organisation, portefeuille, projets, membres partagés) ; historique des changements de statut et de date | Les données survivent au redémarrage ; on sait quand chaque tâche a changé ; deux projets coexistent dans la même organisation |
 | B. Contexte et plan | Fiche projet (description, livrables, faits saillants, parties prenantes, équipe), génération du plan, plan de référence figé | À partir d'une fiche projet, l'assistant propose un plan validable en un clic |
 | C. Suivi quotidien | Tâche planifiée chaque matin, détection des retards, point du matin | Chaque matin, un point liste ce qui avance, ce qui glisse et ce qu'il faut décider |
 | D. Explications | Demande de cause au responsable, catégories, nouvelle date ; évaluation par le chef de projet (poids 1 à 5, catégorie corrigée) | Chaque retard a une cause enregistrée et évaluée |
@@ -98,10 +98,15 @@ L'IA apprend de la cause retenue, pondérée par ce poids : une explication not�
 
 Les essais se font avec des membres numérotés jusqu'à la fin de la phase E.
 
+## Avancement
+
+- 2026-11-02 : phase A livrée (schéma multi-projets, historique des tâches, PGlite en local, PostgreSQL 17 sur le VPS via Docker, tests sur les deux).
+
 ## Décisions prises
 
 - 2026-11-02 : l'explication d'un retard est donnée par le responsable de la tâche, puis évaluée par le chef de projet (poids de 1 à 5, catégorie corrigeable).
 - 2026-11-02 : la cible est un outil de PMO multi-projets ; le modèle de données est multi-projets dès la phase A.
+- 2026-11-02 : hébergement de production sur le VPS (Docker : PostgreSQL + application, nginx devant).
 - 2026-11-02 : PostgreSQL dès le départ (remplace le choix initial de SQLite), à cause des écritures simultanées du suivi multi-projets et d'un futur usage par plusieurs organisations. PGlite garde la simplicité d'un fichier en développement et en tests.
 
 ## Questions encore ouvertes

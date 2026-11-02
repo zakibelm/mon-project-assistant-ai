@@ -1,6 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { getClient, MODEL } from "./client";
 import { boardSnapshot, runTool, TOOLS } from "./tools";
+import type { Db } from "@/lib/db/client";
+import type { Actor } from "@/lib/db/repo";
 import { Board } from "@/lib/board/types";
 
 /*
@@ -12,7 +14,7 @@ const SYSTEM = `Tu es l'assistant de « Assistant Projet », une application de 
 Tu aides l'utilisateur à planifier, suivre et mettre à jour son board en utilisant les outils fournis.
 
 Fonctionnement :
-- L'état actuel du board est fourni en JSON au début de chaque message de l'utilisateur. Utilise les identifiants (id) qu'il contient ; n'en invente jamais.
+- Le contexte du projet (description, livrables, parties prenantes, équipe) et l'état actuel du board sont fournis en JSON au début de chaque message de l'utilisateur. « baseline_due » est la date du plan de référence quand elle diffère de l'échéance actuelle : l'écart mesure le glissement. Utilise les identifiants (id) qu'il contient ; n'en invente jamais.
 - Quand l'utilisateur demande une action (créer, modifier, assigner, déplacer, commenter, automatiser), fais-la avec les outils, puis confirme brièvement ce qui a été fait.
 - Pour planifier un projet : crée d'abord un groupe, puis toutes les tâches en un seul appel create_items, avec responsables, échéances réalistes à partir de la date du jour et sous-tâches utiles. Répartis la charge entre les membres.
 - Si une demande est ambiguë au point de risquer une mauvaise modification (ex. plusieurs tâches correspondent), pose une question courte au lieu d'agir.
@@ -32,7 +34,11 @@ export interface AssistantResult {
   usage: { input: number; output: number; cacheRead: number; cacheWrite: number };
 }
 
-export async function runAssistant(board: Board, user: string, history: ChatTurn[], message: string): Promise<AssistantResult> {
+export async function runAssistant(
+  db: Db, board: Board, user: { name: string; memberId: string | null }, history: ChatTurn[], message: string,
+): Promise<AssistantResult> {
+  // Les écritures de l'assistant sont journalisées comme « assistant, pour le compte de l'utilisateur ».
+  const actor: Actor = { memberId: user.memberId, kind: "assistant" };
   const client = getClient();
   const today = new Date().toISOString().slice(0, 10);
 
@@ -41,7 +47,7 @@ export async function runAssistant(board: Board, user: string, history: ChatTurn
     {
       role: "user",
       content: [
-        { type: "text", text: `Date du jour : ${today}. Utilisateur : ${user}.\nÉtat du board :\n${JSON.stringify(boardSnapshot(board))}` },
+        { type: "text", text: `Date du jour : ${today}. Utilisateur : ${user.name}.\nProjet et board :\n${JSON.stringify(boardSnapshot(board))}` },
         { type: "text", text: message },
       ],
     },
@@ -88,7 +94,7 @@ export async function runAssistant(board: Board, user: string, history: ChatTurn
         const results: Anthropic.ToolResultBlockParam[] = [];
         for (const block of response.content) {
           if (block.type !== "tool_use") continue;
-          const out = runTool(board, user, block.name, block.input);
+          const out = await runTool(db, board.projectId, actor, block.name, block.input);
           if (!out.isError && out.summary) actions.push(out.summary);
           results.push({ type: "tool_result", tool_use_id: block.id, content: out.content, is_error: out.isError || undefined });
         }

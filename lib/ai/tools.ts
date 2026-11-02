@@ -1,8 +1,9 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
+import type { Db } from "@/lib/db/client";
 import {
-  addComment, BoardError, createAutomation, createGroup, createItem, deleteItem, updateItem,
-} from "@/lib/board/store";
+  Actor, addComment, BoardError, createAutomation, createGroup, createTasks, deleteTask, updateTask,
+} from "@/lib/db/repo";
 import { Board, PRIORITIES, STATUSES, STATUS_LABEL } from "@/lib/board/types";
 
 /* Schémas de validation (les entrées du modèle sont validées avant exécution). */
@@ -54,7 +55,7 @@ export const TOOLS: Anthropic.Tool[] = [
             properties: {
               name: { type: "string" },
               group_id: { type: "string", description: "Identifiant d'un groupe existant" },
-              owner: { type: ["string", "null"], description: "Prénom d'un membre du board, ou null" },
+              owner: { type: ["string", "null"], description: "Prénom d'un membre du projet, ou null" },
               due: { type: ["string", "null"], description: "Échéance AAAA-MM-JJ, ou null" },
               priority: { type: "string", enum: [...PRIORITIES] },
               subtasks: { type: "array", items: { type: "string" } },
@@ -106,8 +107,8 @@ export const TOOLS: Anthropic.Tool[] = [
 
 export interface ToolOutcome { content: string; isError: boolean; summary?: string }
 
-/** Exécute un appel d'outil du modèle sur le board, après validation. */
-export function runTool(board: Board, user: string, name: string, rawInput: unknown): ToolOutcome {
+/** Exécute un appel d'outil du modèle sur le projet, après validation. Chaque écriture est journalisée. */
+export async function runTool(db: Db, projectId: string, actor: Actor, name: string, rawInput: unknown): Promise<ToolOutcome> {
   if (!(name in schemas)) return { content: `Outil inconnu : ${name}`, isError: true };
   const parsed = schemas[name as ToolName].safeParse(rawInput);
   if (!parsed.success) {
@@ -116,35 +117,37 @@ export function runTool(board: Board, user: string, name: string, rawInput: unkn
   try {
     switch (name as ToolName) {
       case "create_group": {
-        const g = createGroup(board, (parsed.data as z.infer<typeof schemas.create_group>).name);
+        const g = await createGroup(db, projectId, (parsed.data as z.infer<typeof schemas.create_group>).name);
         return { content: JSON.stringify(g), isError: false, summary: `Groupe créé : ${g.name}` };
       }
       case "create_items": {
         const d = parsed.data as z.infer<typeof schemas.create_items>;
-        const created = d.items.map((i) => createItem(board, {
+        const created = await createTasks(db, projectId, actor, d.items.map((i) => ({
           name: i.name, groupId: i.group_id, owner: i.owner, due: i.due, priority: i.priority, subtasks: i.subtasks,
-        }));
-        return { content: JSON.stringify(created.map((c) => ({ id: c.id, name: c.name }))), isError: false, summary: `${created.length} tâche(s) créée(s)` };
+        })));
+        return { content: JSON.stringify(created), isError: false, summary: `${created.length} tâche(s) créée(s)` };
       }
       case "update_item": {
         const d = parsed.data as z.infer<typeof schemas.update_item>;
-        const it = updateItem(board, d.item_id, {
+        const r = await updateTask(db, projectId, actor, d.item_id, {
           name: d.name, status: d.status, owner: d.owner, due: d.due, priority: d.priority, groupId: d.group_id,
         });
-        return { content: JSON.stringify(it), isError: false, summary: `Tâche modifiée : ${it.name}` };
+        return r.changed
+          ? { content: JSON.stringify(r), isError: false, summary: `Tâche modifiée : ${r.name}` }
+          : { content: "Aucun changement : la tâche avait déjà ces valeurs.", isError: false };
       }
       case "delete_item": {
-        const it = deleteItem(board, (parsed.data as z.infer<typeof schemas.delete_item>).item_id);
-        return { content: `Supprimée : ${it.name}`, isError: false, summary: `Tâche supprimée : ${it.name}` };
+        const r = await deleteTask(db, projectId, actor, (parsed.data as z.infer<typeof schemas.delete_item>).item_id);
+        return { content: `Supprimée : ${r.name}`, isError: false, summary: `Tâche supprimée : ${r.name}` };
       }
       case "add_comment": {
         const d = parsed.data as z.infer<typeof schemas.add_comment>;
-        addComment(board, d.item_id, user, d.text);
+        await addComment(db, projectId, actor, d.item_id, d.text);
         return { content: "Commentaire ajouté.", isError: false, summary: "Commentaire ajouté" };
       }
       case "create_automation": {
         const d = parsed.data as z.infer<typeof schemas.create_automation>;
-        const a = createAutomation(board, d.on_status, d.notify);
+        const a = await createAutomation(db, projectId, d.on_status, d.notify);
         return { content: JSON.stringify(a), isError: false, summary: `Automatisation : ${STATUS_LABEL[a.onStatus]} → prévenir ${a.notify}` };
       }
     }
@@ -158,11 +161,16 @@ export function runTool(board: Board, user: string, name: string, rawInput: unkn
 /** Vue compacte du board envoyée au modèle à chaque demande. */
 export function boardSnapshot(board: Board) {
   return {
-    board: board.name,
+    project: board.name,
+    description: board.description,
+    period: { start: board.startDate, end: board.endDate },
+    deliverables: board.deliverables,
+    stakeholders: board.stakeholders,
     members: board.members,
     groups: board.groups.map((g) => ({ id: g.id, name: g.name })),
     items: board.items.map((i) => ({
-      id: i.id, group_id: i.groupId, name: i.name, status: i.status, owner: i.owner, due: i.due, priority: i.priority,
+      id: i.id, group_id: i.groupId, name: i.name, status: i.status, owner: i.owner, due: i.due,
+      baseline_due: i.baselineDue !== i.due ? i.baselineDue : undefined, priority: i.priority,
       subtasks: i.subtasks.length ? `${i.subtasks.filter((s) => s.done).length}/${i.subtasks.length}` : undefined,
       last_comment: i.comments.at(-1) ? `${i.comments.at(-1)!.author} : ${i.comments.at(-1)!.text}` : undefined,
     })),

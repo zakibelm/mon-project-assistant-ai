@@ -1,0 +1,157 @@
+/**
+ * Schéma multi-projets (outil de PMO).
+ *
+ * Organisation → membres (partagés entre projets), portefeuilles → projets → tâches.
+ * Chaque changement de tâche est journalisé dans task_events : c'est la base du suivi
+ * (retards par rapport au plan de référence) et, plus tard, de l'apprentissage.
+ */
+import { randomUUID } from "crypto";
+import {
+  boolean, date, index, integer, pgTable, primaryKey, text, timestamp,
+} from "drizzle-orm/pg-core";
+
+const id = () => text("id").primaryKey().$defaultFn(() => randomUUID());
+const createdAt = () => timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
+
+export const organizations = pgTable("organizations", {
+  id: id(),
+  name: text("name").notNull(),
+  createdAt: createdAt(),
+});
+
+export const members = pgTable("members", {
+  id: id(),
+  orgId: text("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  displayName: text("display_name").notNull(),
+  email: text("email"),
+  createdAt: createdAt(),
+}, (t) => [index("members_org_idx").on(t.orgId)]);
+
+export const portfolios = pgTable("portfolios", {
+  id: id(),
+  orgId: text("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  createdAt: createdAt(),
+});
+
+export const projects = pgTable("projects", {
+  id: id(),
+  orgId: text("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  portfolioId: text("portfolio_id").references(() => portfolios.id, { onDelete: "set null" }),
+  name: text("name").notNull(),
+  description: text("description").notNull().default(""),
+  startDate: date("start_date", { mode: "string" }),
+  endDate: date("end_date", { mode: "string" }),
+  status: text("status", { enum: ["draft", "active", "on_hold", "closed"] }).notNull().default("active"),
+  createdAt: createdAt(),
+}, (t) => [index("projects_org_idx").on(t.orgId)]);
+
+export const projectMembers = pgTable("project_members", {
+  projectId: text("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+  role: text("role").notNull().default("membre"),
+}, (t) => [primaryKey({ columns: [t.projectId, t.memberId] })]);
+
+export const deliverables = pgTable("deliverables", {
+  id: id(),
+  projectId: text("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  dueDate: date("due_date", { mode: "string" }),
+});
+
+export const stakeholders = pgTable("stakeholders", {
+  id: id(),
+  projectId: text("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  role: text("role").notNull().default(""),
+});
+
+export const taskGroups = pgTable("task_groups", {
+  id: id(),
+  projectId: text("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  position: integer("position").notNull().default(0),
+});
+
+export const TASK_STATUSES = ["todo", "doing", "block", "done"] as const;
+export const TASK_PRIORITIES = ["Haute", "Moyenne", "Basse"] as const;
+
+export const tasks = pgTable("tasks", {
+  id: id(),
+  projectId: text("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  groupId: text("group_id").notNull().references(() => taskGroups.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  status: text("status", { enum: TASK_STATUSES }).notNull().default("todo"),
+  ownerId: text("owner_id").references(() => members.id, { onDelete: "set null" }),
+  dueDate: date("due_date", { mode: "string" }),
+  /** Date prévue dans le plan de référence : sert à mesurer les retards. */
+  baselineDueDate: date("baseline_due_date", { mode: "string" }),
+  priority: text("priority", { enum: TASK_PRIORITIES }).notNull().default("Moyenne"),
+  position: integer("position").notNull().default(0),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  createdAt: createdAt(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("tasks_project_idx").on(t.projectId), index("tasks_owner_idx").on(t.ownerId)]);
+
+export const subtasks = pgTable("subtasks", {
+  id: id(),
+  taskId: text("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+  text: text("text").notNull(),
+  done: boolean("done").notNull().default(false),
+  position: integer("position").notNull().default(0),
+});
+
+export const comments = pgTable("comments", {
+  id: id(),
+  taskId: text("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+  authorId: text("author_id").references(() => members.id, { onDelete: "set null" }),
+  body: text("body").notNull(),
+  createdAt: createdAt(),
+}, (t) => [index("comments_task_idx").on(t.taskId)]);
+
+/**
+ * Historique des tâches. Pas de clé étrangère vers tasks : l'historique d'une tâche
+ * supprimée doit rester consultable.
+ */
+export const taskEvents = pgTable("task_events", {
+  id: id(),
+  projectId: text("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  taskId: text("task_id").notNull(),
+  actorId: text("actor_id").references(() => members.id, { onDelete: "set null" }),
+  /** member : action directe ; assistant : action de l'IA pour le compte de actorId ; system : automatisme. */
+  actorKind: text("actor_kind", { enum: ["member", "assistant", "system"] }).notNull(),
+  kind: text("kind", { enum: ["created", "updated", "deleted"] }).notNull(),
+  field: text("field"),
+  oldValue: text("old_value"),
+  newValue: text("new_value"),
+  createdAt: createdAt(),
+}, (t) => [index("task_events_task_idx").on(t.taskId), index("task_events_project_idx").on(t.projectId, t.createdAt)]);
+
+export const automations = pgTable("automations", {
+  id: id(),
+  projectId: text("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  onStatus: text("on_status", { enum: TASK_STATUSES }).notNull(),
+  notifyMemberId: text("notify_member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+  createdAt: createdAt(),
+});
+
+export const notifications = pgTable("notifications", {
+  id: id(),
+  orgId: text("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  projectId: text("project_id").references(() => projects.id, { onDelete: "cascade" }),
+  memberId: text("member_id").references(() => members.id, { onDelete: "cascade" }),
+  body: text("body").notNull(),
+  read: boolean("read").notNull().default(false),
+  createdAt: createdAt(),
+}, (t) => [index("notifications_member_idx").on(t.memberId, t.read)]);
+
+/** Usage de l'IA par organisation et par jour (limite quotidienne et suivi des coûts). */
+export const aiUsage = pgTable("ai_usage", {
+  orgId: text("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  day: date("day", { mode: "string" }).notNull(),
+  requests: integer("requests").notNull().default(0),
+  inputTokens: integer("input_tokens").notNull().default(0),
+  outputTokens: integer("output_tokens").notNull().default(0),
+  cacheReadTokens: integer("cache_read_tokens").notNull().default(0),
+  cacheWriteTokens: integer("cache_write_tokens").notNull().default(0),
+}, (t) => [primaryKey({ columns: [t.orgId, t.day] })]);

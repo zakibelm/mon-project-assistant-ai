@@ -44,14 +44,14 @@ const mock = http.createServer((req, res) => {
 await new Promise((r) => mock.listen(MOCK_PORT, r));
 
 const app = spawn("npx", ["next", "start", "-p", String(APP_PORT)], {
-  env: { ...process.env, OPENROUTER_API_KEY: "sk-or-test", AI_BASE_URL: `http://127.0.0.1:${MOCK_PORT}`, NEXT_TELEMETRY_DISABLED: "1" },
+  env: { ...process.env, PGLITE_DIR: "memory://", DATABASE_URL: "", OPENROUTER_API_KEY: "sk-or-test", AI_BASE_URL: `http://127.0.0.1:${MOCK_PORT}`, NEXT_TELEMETRY_DISABLED: "1" },
   stdio: ["ignore", "pipe", "pipe"],
   detached: true,
 });
 let logs = ""; app.stdout.on("data", (d) => (logs += d)); app.stderr.on("data", (d) => (logs += d));
 const base = `http://127.0.0.1:${APP_PORT}`;
-for (let i = 0; i < 60; i++) { try { await fetch(base + "/api/board"); break; } catch { await new Promise((r) => setTimeout(r, 500)); } }
-const ask = (message) => fetch(base + "/api/assistant", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message }) }).then(async (r) => ({ status: r.status, data: await r.json() }));
+for (let i = 0; i < 60; i++) { try { await fetch(base + "/api/projects"); break; } catch { await new Promise((r) => setTimeout(r, 500)); } }
+const ask = (message) => fetch(base + "/api/assistant", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ projectId: "prj_site", message }) }).then(async (r) => ({ status: r.status, data: await r.json() }));
 
 try {
   // 1. Planification avec outils
@@ -61,8 +61,19 @@ try {
   assert.deepEqual(r1.data.actions, ["Groupe créé : Événement client", "2 tâche(s) créée(s)"]);
   const g = r1.data.board.groups.find((x) => x.name === "Événement client");
   assert.ok(g, "groupe créé");
-  assert.equal(r1.data.board.items.filter((i) => i.groupId === g.id).length, 2);
-  assert.equal(r1.data.board.items.find((i) => i.id === "t3").status, "block", "entrée invalide non appliquée");
+  const createdItems = r1.data.board.items.filter((i) => i.groupId === g.id);
+  assert.equal(createdItems.length, 2);
+  assert.equal(createdItems.find((i) => i.name === "Réserver le lieu").baselineDue, "2026-11-13");
+  assert.equal(r1.data.board.items.find((i) => i.name.startsWith("Configurer le nom de domaine")).status, "block", "entrée invalide non appliquée");
+
+  // Historique : la création est journalisée comme faite par l'assistant
+  const hist = await fetch(`${base}/api/tasks/${createdItems[0].id}/history`).then((r) => r.json());
+  assert.equal(hist.events[0].kind, "created");
+  assert.equal(hist.events[0].actorKind, "assistant");
+
+  // Portefeuille : le projet compte les nouvelles tâches
+  const pf = await fetch(base + "/api/projects").then((r) => r.json());
+  assert.equal(pf.projects.find((p) => p.id === "prj_site").total, 10);
 
   // Requête envoyée au « OpenRouter » : chemin, auth, modèle, cache, outils
   const first = seen[0];
@@ -71,6 +82,8 @@ try {
   assert.equal(first.title, "Assistant Projet");
   assert.equal(first.body.model, "anthropic/claude-opus-5.5");
   assert.deepEqual(first.body.system[0].cache_control, { type: "ephemeral" });
+  const ctx = first.body.messages.at(-1).content[0].text;
+  assert.match(ctx, /"deliverables":\[\{"name":"Site en ligne"/, "le contexte du projet est envoyé au modèle");
   assert.deepEqual(first.body.tools.map((t) => t.name), ["create_group", "create_items", "update_item", "delete_item", "add_comment", "create_automation"]);
   const third = seen[2].body.messages.at(-1).content;
   assert.equal(third.find((b) => b.tool_use_id === "tu_3").is_error, true, "erreur de validation renvoyée au modèle");
@@ -92,8 +105,10 @@ try {
   // 4. Requête invalide
   const r4 = await fetch(base + "/api/assistant", { method: "POST", body: "{}" });
   assert.equal(r4.status, 400);
+  const r5 = await fetch(base + "/api/assistant", { method: "POST", body: JSON.stringify({ projectId: "inconnu", message: "x" }) });
+  assert.equal(r5.status, 404);
 
-  console.log("OK : 4 scénarios passés (planification avec outils, refus, clé refusée, requête invalide)");
+  console.log("OK : 5 scénarios passés (planification avec outils et historique, refus, clé refusée, requête invalide, projet inconnu)");
 } catch (e) {
   console.error(e.message, "\n--- logs app ---\n", logs.slice(-2000));
   process.exitCode = 1;
