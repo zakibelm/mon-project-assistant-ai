@@ -142,6 +142,22 @@ try {
   assert.equal(d2.status, 422);
   assert.match(d2.data.error, /n'a pas produit de plan/);
 
+  // 1 ter. Changer le responsable depuis le tableau : uniquement un membre de l'équipe du projet
+  const patch = (id, body) => fetch(`${base}/api/tasks/${id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }).then(async (r) => ({ status: r.status, data: await r.json() }));
+  const site = await fetch(base + "/api/projects/prj_site").then((r) => r.json());
+  const photos = site.board.items.find((i) => i.name === "Choisir les photos de l'équipe");
+  const a1 = await patch(photos.id, { owner: "Léa" });
+  assert.equal(a1.status, 200);
+  assert.equal(a1.data.board.items.find((i) => i.id === photos.id).owner, "Léa");
+  const h = await fetch(`${base}/api/tasks/${photos.id}/history`).then((r) => r.json());
+  assert.ok(h.events.some((e) => e.field === "owner" && e.actorKind === "member"), "changement journalisé");
+  const a2 = await patch(photos.id, { owner: "Karim" }); // Karim est membre du PMO, mais pas de ce projet
+  assert.equal(a2.status, 400);
+  assert.match(a2.data.error, /n'est pas membre du projet/);
+  const a3 = await patch(photos.id, { owner: null });
+  assert.equal(a3.data.board.items.find((i) => i.id === photos.id).owner, null);
+  assert.equal((await patch("inconnue", { owner: null })).status, 404);
+
   // 2. Refus du filtre de sécurité
   scenario = "refusal";
   const r2 = await ask("…");
@@ -160,7 +176,7 @@ try {
   const r5 = await fetch(base + "/api/assistant", { method: "POST", body: JSON.stringify({ projectId: "inconnu", message: "x" }) });
   assert.equal(r5.status, 404);
 
-  console.log("OK : 7 scénarios passés (point du jour, nouveau projet, planification avec outils et historique, refus, clé refusée, requête invalide, projet inconnu)");
+  console.log("OK : 8 scénarios passés (point du jour, nouveau projet, responsable, planification avec outils et historique, refus, clé refusée, requête invalide, projet inconnu)");
 } catch (e) {
   console.error(e.message, "\n--- logs app ---\n", logs.slice(-2000));
   process.exitCode = 1;

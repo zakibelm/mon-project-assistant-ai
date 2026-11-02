@@ -5,8 +5,9 @@ import Chat, { Msg } from "./Chat";
 const LABEL: Record<Status, string> = { todo: "À faire", doing: "En cours", block: "Bloqué", done: "Terminé" };
 const fmt = (d: string | null) => (d ? `${d.slice(8)}/${d.slice(5, 7)}` : "—");
 
-export default function ProjectView({ board, msgs, busy, onSend }: {
+export default function ProjectView({ board, msgs, busy, onSend, onAssign }: {
   board: Board | null; msgs: Msg[]; busy: boolean; onSend: (text: string) => void;
+  onAssign: (taskId: string, owner: string | null) => void;
 }) {
   if (!board) return <p className="muted" style={{ padding: 24 }}>Chargement du projet…</p>;
   return (
@@ -35,7 +36,14 @@ export default function ProjectView({ board, msgs, busy, onSend }: {
                       <tr key={i.id}>
                         <td>{i.name}</td>
                         <td><span className="pill" style={{ background: `var(--st-${i.status})` }}>{LABEL[i.status]}</span></td>
-                        <td>{i.owner ?? "—"}</td>
+                        <td>
+                          {/* Seuls les membres de l'équipe du projet sont proposés. */}
+                          <select className="owner" value={i.owner ?? ""} data-empty={!i.owner}
+                            onChange={(e) => onAssign(i.id, e.target.value || null)} aria-label={`Responsable de « ${i.name} »`}>
+                            <option value="">— à assigner</option>
+                            {board.members.map((m) => <option key={m.name} value={m.name}>{m.name}</option>)}
+                          </select>
+                        </td>
                         <td className="mono">
                           {fmt(i.due)}
                           {i.baselineDue && i.due && i.due !== i.baselineDue && <span className="slip" title="Date du plan de référence"> (prévu {fmt(i.baselineDue)})</span>}

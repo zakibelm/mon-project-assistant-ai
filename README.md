@@ -52,6 +52,7 @@ Documentation complète : `docs/assistant-ia.md`.
 | `POST /api/projects` | `{ draft }` → crée le projet relu ; les échéances deviennent le plan de référence |
 | `GET /api/projects` | Portefeuille : projets et indicateurs (terminées, en retard, bloquées, glissées) |
 | `GET /api/projects/:id` | Tableau d'un projet |
+| `PATCH /api/tasks/:id` | `{ owner }` → change le responsable (un membre de l'équipe du projet, ou `null`) |
 | `GET /api/tasks/:id/history` | Historique d'une tâche |
 | `POST /api/assistant` | `{ projectId, message, history }` |
 

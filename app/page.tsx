@@ -50,6 +50,16 @@ export default function Home() {
     }
   }, [chats]);
 
+  const assign = useCallback(async (taskId: string, owner: string | null) => {
+    const res = await fetch(`/api/tasks/${taskId}`, {
+      method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ owner }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) { setBoard(data.board); return; }
+    const pid = view;
+    setChats((c) => ({ ...c, [pid]: [...(c[pid] ?? []), { role: "error", text: `Responsable non changé : ${data.error || "erreur inconnue"}` }] }));
+  }, [view]);
+
   // Une action du point du jour ouvre le projet et confie la consigne à l'assistant.
   const act = (a: BriefAction) => {
     setView(a.projectId);
@@ -78,7 +88,7 @@ export default function Home() {
           ? <Today brief={brief} onAct={act} onOpen={setView} onNew={() => setView("new")} />
           : view === "new"
           ? <NewProject onCancel={() => setView("today")} onCreated={async (id) => { await loadBrief(); setView(id); }} />
-          : <ProjectView board={board} msgs={chats[view] ?? []} busy={busy} onSend={(t) => send(view, t)} />}
+          : <ProjectView board={board} msgs={chats[view] ?? []} busy={busy} onSend={(t) => send(view, t)} onAssign={assign} />}
       </div>
     </>
   );

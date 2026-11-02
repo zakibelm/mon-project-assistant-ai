@@ -124,6 +124,9 @@ tr.flash td{animation:flash 1.6s ease-out}
 @keyframes flash{from{background:color-mix(in srgb,var(--spot) 35%,transparent)}to{background:transparent}}
 .pill{display:inline-block;border:0;color:#fff;border-radius:5px;padding:2px 9px;font-size:12px;font-weight:500}
 .slip{color:var(--st-doing);font-size:12px;white-space:nowrap}
+select.owner{border:1px solid transparent;background:transparent;border-radius:6px;padding:4px 6px;margin:-4px -6px;color:var(--ink);font-size:14px;max-width:100%}
+select.owner:hover,select.owner:focus{border-color:var(--line);background:var(--bg)}
+select.owner[data-empty="true"]{color:var(--st-block)}
 .lastc{display:block;font-size:12px;color:var(--muted);margin-top:2px}
 .notifs{margin-top:12px;font-size:13px;color:var(--muted)}
 
@@ -499,11 +502,12 @@ function renderProject(p) {
       <div class="tscroll"><table><thead><tr><th>Tâche</th><th>Statut</th><th>Responsable</th><th>Échéance</th><th>Priorité</th><th>Sous-tâches</th></tr></thead><tbody>
       ${ts.map((t) => `<tr class="${S.flash === t.id ? "flash" : ""}" id="row-${t.id}"><td>${esc(t.name)}${t.comments.length ? `<span class="lastc">💬 ${esc(t.comments.at(-1)[0])} : ${esc(t.comments.at(-1)[1])}</span>` : ""}</td>
         <td><button class="pill" style="background:var(${ST[t.status][1]})" data-cycle="${t.id}" title="Cliquer pour changer le statut">${ST[t.status][0]}</button></td>
-        <td>${esc(t.owner || "— à assigner")}</td>
+        <td><select class="owner" data-owner="${t.id}" data-empty="${!t.owner}" aria-label="Responsable de « ${esc(t.name)} »">
+          <option value="">— à assigner</option>${p.team.map(([m]) => `<option ${m === t.owner ? "selected" : ""}>${esc(m)}</option>`).join("")}</select></td>
         <td class="mono">${fmt(t.due)}${t.baseline && t.due !== t.baseline ? ` <span class="slip">(prévu ${fmt(t.baseline)})</span>` : ""}</td>
         <td>${t.prio}</td><td class="mono">${t.subs ? t.subs.join("/") : "—"}</td></tr>`).join("")}
       </tbody></table></div></section>`; }).join("")}
-    <p class="notifs">Cliquez sur un statut pour le changer : le point du jour se met à jour en conséquence.</p>
+    <p class="notifs">Cliquez sur un statut pour le changer, ou choisissez un responsable dans la liste des membres de l'équipe : le point du jour se met à jour en conséquence.</p>
   </div>
   <aside class="chat" id="chat" aria-label="Assistant"><div class="head"><strong>Assistant</strong><div class="muted">${esc(p.name)} · réponses préparées pour la démo</div></div>
     <div class="log" id="log" aria-live="polite">${msgs.length ? "" : `<div class="msg assistant">Je connais le contexte de ce projet. Que voulez-vous faire ?</div>`}
@@ -583,7 +587,14 @@ document.addEventListener("input", (e) => {
   if (e.target.id === "dname") S.draft.name = e.target.value;
 });
 document.addEventListener("change", (e) => {
-  const el = e.target; if (el.dataset.f === undefined || !S.draft) return;
+  const el = e.target;
+  if (el.dataset.owner) {
+    const t = P(S.view).tasks.find((x) => x.id === el.dataset.owner);
+    t.owner = el.value || null; S.flash = t.id; render();
+    toast(t.owner ? `« ${t.name} » est confiée à ${t.owner}.` : `« ${t.name} » n'a plus de responsable.`);
+    return;
+  }
+  if (el.dataset.f === undefined || !S.draft) return;
   const row = S.draft.groups[+el.dataset.g][1][+el.dataset.t];
   row[+el.dataset.f] = el.value || null; render();
 });

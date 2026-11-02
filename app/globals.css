@@ -166,3 +166,6 @@ tr:last-child td{border-bottom:0}
 .cell:hover,.cell:focus{border-color:var(--line);background:var(--bg)}
 select.cell[data-empty="true"]{color:var(--st-block)}
 .subs{font-size:12px;padding:0 6px 4px}
+select.owner{border:1px solid transparent;background:transparent;border-radius:6px;padding:4px 6px;margin:-4px -6px;color:var(--ink);font:inherit;font-size:14px;max-width:100%}
+select.owner:hover,select.owner:focus{border-color:var(--line);background:var(--bg)}
+select.owner[data-empty="true"]{color:var(--st-block)}
