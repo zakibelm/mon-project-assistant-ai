@@ -6,8 +6,9 @@
  * (retards par rapport au plan de référence) et, plus tard, de l'apprentissage.
  */
 import { randomUUID } from "crypto";
+import { sql } from "drizzle-orm";
 import {
-  boolean, date, index, integer, pgTable, primaryKey, text, timestamp,
+  boolean, check, date, index, integer, jsonb, pgTable, primaryKey, real, text, timestamp,
 } from "drizzle-orm/pg-core";
 
 const id = () => text("id").primaryKey().$defaultFn(() => randomUUID());
@@ -74,6 +75,12 @@ export const taskGroups = pgTable("task_groups", {
 });
 
 export const TASK_STATUSES = ["todo", "doing", "block", "done"] as const;
+
+/** Types de problème à l'origine d'un retard (servent à regrouper les leçons apprises). */
+export const PROBLEM_TYPES = [
+  "dependance_externe", "sous_estimation", "information_manquante", "changement_perimetre",
+  "surcharge", "probleme_technique", "autre",
+] as const;
 export const TASK_PRIORITIES = ["Haute", "Moyenne", "Basse"] as const;
 
 export const tasks = pgTable("tasks", {
@@ -89,9 +96,26 @@ export const tasks = pgTable("tasks", {
   priority: text("priority", { enum: TASK_PRIORITIES }).notNull().default("Moyenne"),
   position: integer("position").notNull().default(0),
   completedAt: timestamp("completed_at", { withTimezone: true }),
+  /* Note d'explication (rédigée par le responsable de la tâche) */
+  problemType: text("problem_type", { enum: PROBLEM_TYPES }),
+  noteProblem: text("note_problem"),
+  noteResolution: text("note_resolution"),
+  noteAuthorId: text("note_author_id").references(() => members.id, { onDelete: "set null" }),
+  noteUpdatedAt: timestamp("note_updated_at", { withTimezone: true }),
+  /* Évaluation de 1 à 5, proposée par le responsable ou le chef de projet */
+  rating: integer("rating"),
+  ratedById: text("rated_by_id").references(() => members.id, { onDelete: "set null" }),
+  ratedAt: timestamp("rated_at", { withTimezone: true }),
+  /* Validation par le chef de projet (case à cocher) : seules les notes validées servent à l'apprentissage */
+  validated: boolean("validated").notNull().default(false),
+  validatedById: text("validated_by_id").references(() => members.id, { onDelete: "set null" }),
+  validatedAt: timestamp("validated_at", { withTimezone: true }),
   createdAt: createdAt(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-}, (t) => [index("tasks_project_idx").on(t.projectId), index("tasks_owner_idx").on(t.ownerId)]);
+}, (t) => [
+  index("tasks_project_idx").on(t.projectId), index("tasks_owner_idx").on(t.ownerId),
+  check("tasks_rating_range", sql`${t.rating} is null or ${t.rating} between 1 and 5`),
+]);
 
 export const subtasks = pgTable("subtasks", {
   id: id(),
@@ -144,6 +168,23 @@ export const notifications = pgTable("notifications", {
   read: boolean("read").notNull().default(false),
   createdAt: createdAt(),
 }, (t) => [index("notifications_member_idx").on(t.memberId, t.read)]);
+
+/** Leçons apprises, synthétisées par l'IA à partir des notes validées. */
+export const lessons = pgTable("lessons", {
+  id: id(),
+  orgId: text("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  /** null = synthèse sur tous les projets. */
+  projectId: text("project_id").references(() => projects.id, { onDelete: "cascade" }),
+  problemType: text("problem_type", { enum: PROBLEM_TYPES }).notNull(),
+  title: text("title").notNull(),
+  problem: text("problem").notNull(),
+  resolution: text("resolution").notNull(),
+  recommendation: text("recommendation").notNull(),
+  /** Poids moyen des notes sources (évaluation de 1 à 5). */
+  weight: real("weight").notNull(),
+  sourceTaskIds: jsonb("source_task_ids").$type<string[]>().notNull(),
+  createdAt: createdAt(),
+}, (t) => [index("lessons_org_idx").on(t.orgId, t.createdAt)]);
 
 /** Usage de l'IA par organisation et par jour (limite quotidienne et suivi des coûts). */
 export const aiUsage = pgTable("ai_usage", {

@@ -118,5 +118,37 @@ assert.equal(clinic.items[0].subtasks.length, 2);
 assert.equal((await repo.getTaskHistory(db, clinic.items[0].id))[0].kind, "created");
 assert.equal((await repo.listProjects(db, DEMO_ORG_ID)).length, 3);
 
-console.log(`OK (${process.env.DATABASE_URL ? "PostgreSQL" : "PGlite"}) : 12 vérifications de la base passées (point du jour, création de projet, multi-projets, historique, glissement, automatisations, garde-fous, quota)`);
+// 12. Notes, évaluation et validation (case réservée au chef de projet)
+const sami = await repo.memberIdByName(db, DEMO_ORG_ID, "Sami");
+const ines = await repo.memberIdByName(db, DEMO_ORG_ID, "Inès");
+const asSami = { memberId: sami, kind: "member" as const }, asInes = { memberId: ines, kind: "member" as const }, asZaki = actor;
+const crmBoard = (await repo.getBoard(db, "prj_crm"))!;
+const exportTask = crmBoard.items.find((i) => i.name === "Exporter les contacts")!;
+assert.equal(exportTask.note!.rating, 3);
+assert.equal(exportTask.note!.validated, false, "note du seed en attente de validation");
+assert.equal((await repo.listValidatedNotes(db, DEMO_ORG_ID)).length, 2);
+await assert.rejects(repo.setTaskNote(db, "prj_crm", asInes, exportTask.id, { problemType: "autre", problem: "Pas ma tâche", resolution: "" }), /responsable de la tâche ou le chef de projet/);
+await assert.rejects(repo.setTaskValidation(db, "prj_crm", asSami, exportTask.id, true), /Seul le chef de projet/);
+await repo.setTaskValidation(db, "prj_crm", asZaki, exportTask.id, true);
+assert.equal((await repo.listValidatedNotes(db, DEMO_ORG_ID)).length, 3, "validée par le chef de projet");
+const r1 = await repo.setTaskRating(db, "prj_crm", asSami, exportTask.id, 4); // le responsable corrige son évaluation
+assert.equal(r1.unvalidated, true, "toute modification décoche la validation");
+assert.equal((await repo.listValidatedNotes(db, DEMO_ORG_ID)).length, 2);
+await repo.setTaskValidation(db, "prj_crm", asZaki, exportTask.id, true);
+const n1 = await repo.setTaskNote(db, "prj_crm", asSami, exportTask.id, { problemType: "probleme_technique", problem: "Limite d'export à 1 000 contacts.", resolution: "Export en tranches." });
+assert.equal(n1.unvalidated, true);
+await assert.rejects(repo.setTaskRating(db, "prj_crm", asSami, exportTask.id, 6), /entier de 1 à 5/);
+const doublons = crmBoard.items.find((i) => i.name === "Nettoyer les doublons")!;
+await assert.rejects(repo.setTaskRating(db, "prj_crm", asZaki, doublons.id, 3), /pas encore de note/);
+await repo.setTaskNote(db, "prj_crm", asZaki, doublons.id, { problemType: "surcharge", problem: "Inès était sur deux projets.", resolution: "" });
+await assert.rejects(repo.setTaskValidation(db, "prj_crm", asZaki, doublons.id, true), /note et une évaluation/);
+const evts = await repo.getTaskHistory(db, exportTask.id);
+assert.ok(["note", "rating", "validated"].every((f) => evts.some((e) => e.field === f)), "notes, évaluations et validations journalisées");
+const stats = repo.problemStats(await repo.listValidatedNotes(db, DEMO_ORG_ID));
+assert.deepEqual(stats.map((x) => x.problemType), ["dependance_externe", "sous_estimation"]);
+await repo.saveLessons(db, DEMO_ORG_ID, null, [{ problemType: "dependance_externe", title: "T", problem: "P", resolution: "R", recommendation: "Rec", weight: 4, sourceTaskIds: ["x"] }]);
+await repo.saveLessons(db, DEMO_ORG_ID, null, [{ problemType: "sous_estimation", title: "T2", problem: "P", resolution: "R", recommendation: "Rec", weight: 2, sourceTaskIds: ["y"] }]);
+assert.deepEqual((await repo.listLessons(db, DEMO_ORG_ID, null)).map((l) => l.title), ["T2"], "une nouvelle synthèse remplace la précédente");
+
+console.log(`OK (${process.env.DATABASE_URL ? "PostgreSQL" : "PGlite"}) : 13 vérifications de la base passées (point du jour, création de projet, notes et validation, multi-projets, historique, glissement, automatisations, garde-fous, quota)`);
 process.exit(0);

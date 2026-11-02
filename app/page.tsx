@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { Board } from "@/lib/board/types";
 import type { Brief, BriefAction } from "@/lib/brief";
 import type { Msg } from "./components/Chat";
+import Lessons from "./components/Lessons";
 import NewProject from "./components/NewProject";
 import ProjectView from "./components/ProjectView";
 import Today from "./components/Today";
@@ -15,6 +16,7 @@ export default function Home() {
   const [view, setView] = useState<string>("today");
   const [brief, setBrief] = useState<Brief | null>(null);
   const [board, setBoard] = useState<Board | null>(null);
+  const [me, setMe] = useState<string | null>(null);
   const [usage, setUsage] = useState<Usage | null>(null);
   const [chats, setChats] = useState<Record<string, Msg[]>>({});
   const [busy, setBusy] = useState(false);
@@ -23,9 +25,9 @@ export default function Home() {
   useEffect(() => { loadBrief(); }, [loadBrief]);
   useEffect(() => {
     if (view === "today") { loadBrief(); return; }
-    if (view === "new") return;
+    if (view === "new" || view === "lessons") return;
     setBoard(null);
-    fetch(`/api/projects/${view}`).then((r) => r.json()).then((d) => { setBoard(d.board); setUsage(d.usage); }).catch(() => {});
+    fetch(`/api/projects/${view}`).then((r) => r.json()).then((d) => { setBoard(d.board); setMe(d.me ?? null); setUsage(d.usage); }).catch(() => {});
   }, [view, loadBrief]);
 
   const send = useCallback(async (projectId: string, text: string) => {
@@ -60,6 +62,15 @@ export default function Home() {
     setChats((c) => ({ ...c, [pid]: [...(c[pid] ?? []), { role: "error", text: `Responsable non changé : ${data.error || "erreur inconnue"}` }] }));
   }, [view]);
 
+  /** Envoie une modification de note, d'évaluation ou de validation ; renvoie le message d'erreur éventuel. */
+  const put = useCallback(async (url: string, body: unknown): Promise<string | null> => {
+    const res = await fetch(url, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return data.error || "La modification a échoué.";
+    setBoard(data.board);
+    return null;
+  }, []);
+
   // Une action du point du jour ouvre le projet et confie la consigne à l'assistant.
   const act = (a: BriefAction) => {
     setView(a.projectId);
@@ -78,6 +89,7 @@ export default function Home() {
                 <span className="dot" style={{ background: STATE_COLOR[p.state] }} />{p.name}
               </button>
             ))}
+            <button aria-current={view === "lessons" ? "page" : undefined} onClick={() => setView("lessons")}>Leçons apprises</button>
             <button className="new" aria-current={view === "new" ? "page" : undefined} onClick={() => setView("new")}>+ Nouveau projet</button>
           </nav>
           {usage && <span className="usage mono">IA : {usage.requests} demande(s) aujourd&apos;hui</span>}
@@ -86,9 +98,14 @@ export default function Home() {
       <div className="page">
         {view === "today"
           ? <Today brief={brief} onAct={act} onOpen={setView} onNew={() => setView("new")} onChanged={loadBrief} />
+          : view === "lessons"
+          ? <Lessons projects={brief?.pulse.map((p) => ({ id: p.id, name: p.name })) ?? []} />
           : view === "new"
           ? <NewProject onCancel={() => setView("today")} onCreated={async (id) => { await loadBrief(); setView(id); }} />
-          : <ProjectView board={board} msgs={chats[view] ?? []} busy={busy} onSend={(t) => send(view, t)} onAssign={assign} />}
+          : <ProjectView board={board} msgs={chats[view] ?? []} busy={busy} onSend={(t) => send(view, t)} onAssign={assign} me={me}
+              onSaveNote={(id, n) => put(`/api/tasks/${id}/note`, n)}
+              onRate={(id, rating) => put(`/api/tasks/${id}/rating`, { rating })}
+              onValidate={(id, validated) => put(`/api/tasks/${id}/validation`, { validated })} />}
       </div>
     </>
   );

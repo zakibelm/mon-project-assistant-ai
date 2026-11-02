@@ -16,6 +16,15 @@ L'application s'ouvre sur le point du jour, pas sur un tableau. L'assistant pré
 
 « + Nouveau projet » : on colle un brief, un courriel ou des notes. L'assistant en tire le contexte (objectif, dates, livrables, parties prenantes, équipe), un plan complet (phases, tâches assignées, échéances, sous-tâches) et les questions à préciser. Tout est modifiable avant validation ; rien n'est enregistré avant le clic « Créer le projet et figer le plan ». Les échéances validées deviennent le plan de référence. Les membres déjà connus du PMO sont réutilisés, les nouveaux créés. Sans clé d'IA, « Remplir moi-même » ouvre le même écran vide.
 
+## Notes de retard, évaluation et leçons apprises
+
+Dans le tableau d'un projet, trois colonnes : **Notes**, **Évaluation** (1 à 5) et **Validé**.
+
+- **La note** est écrite par le responsable de la tâche, ou par le chef de projet : type de problème, ce qui s'est passé, comment c'est résolu. Une tâche en retard sans note affiche « Explication attendue ».
+- **L'évaluation de 1 à 5** est proposée par le responsable ou le chef de projet : fiabilité et utilité de l'explication.
+- **La case « Validé »** n'est active que pour le chef de projet du projet (rôle contenant « chef de projet »). Toute modification ultérieure de la note ou de l'évaluation la décoche.
+- **La page « Leçons apprises »** montre, sans IA, les notes validées et leur poids par type de problème. « Synthétiser avec l'IA » en tire des leçons (problème type, ce qui a marché, quoi faire dès le cadrage). Le poids de chaque leçon est la moyenne des évaluations de ses notes sources, calculée par le serveur.
+
 ## Démarrer en local
 
 ```bash
@@ -53,6 +62,11 @@ Documentation complète : `docs/assistant-ia.md`.
 | `GET /api/projects` | Portefeuille : projets et indicateurs (terminées, en retard, bloquées, glissées) |
 | `GET /api/projects/:id` | Tableau d'un projet |
 | `PATCH /api/tasks/:id` | `{ owner?, status?, due? }` → modifie la tâche (responsable limité à l'équipe du projet), journalisé |
+| `PUT /api/tasks/:id/note` | `{ problemType, problem, resolution }` → note d'explication (responsable ou chef de projet) |
+| `PUT /api/tasks/:id/rating` | `{ rating: 1..5 | null }` → évaluation proposée (responsable ou chef de projet) ; décoche la validation |
+| `PUT /api/tasks/:id/validation` | `{ validated }` → case « Validé », réservée au chef de projet |
+| `GET /api/lessons?projectId=` | Notes validées, statistiques par type de problème (sans IA), dernières leçons |
+| `POST /api/lessons` | `{ projectId \| null }` → synthèse des leçons par l'IA à partir des notes validées |
 | `POST /api/tasks/:id/comments` | `{ body }` → message dans le fil de la tâche (les @mentions notifient) |
 | `GET /api/tasks/:id/history` | Historique d'une tâche |
 | `POST /api/assistant` | `{ projectId, message, history }` |

@@ -45,6 +45,23 @@ Le point du jour préfigure la phase C : le même calcul, lancé chaque matin, a
   - chaque tâche reçoit son événement de création dans l'historique.
 - La demande compte dans la limite quotidienne d'IA et ses tokens sont enregistrés.
 
+## Leçons apprises
+
+`lib/ai/lessons.ts` analyse les **notes validées par les chefs de projet** (case « Validé » cochée), d'un projet ou de toute l'organisation, en un seul appel :
+
+- **Entrée :** pour chaque note, le projet, la tâche, le type de problème, l'évaluation de 1 à 5, le problème, la résolution, la date prévue et l'échéance.
+- **Consigne :** pondérer par l'évaluation. Une leçon s'appuie surtout sur des notes à 4 ou 5 ; une note à 1 ou 2 ne justifie une leçon que si d'autres la confirment. Ne rien inventer et citer les notes sources.
+- **Sortie :** l'outil `record_lessons`, avec par leçon le type de problème, un titre, le problème type, ce qui a marché, une recommandation pour le cadrage, et les identifiants des notes sources.
+- **Contrôles côté serveur :** les sources inventées par le modèle sont écartées, et une leçon sans source valable est retirée. **Le poids d'une leçon est recalculé par le serveur** : c'est la moyenne des évaluations réelles de ses sources. Une nouvelle synthèse remplace la précédente pour la même portée.
+- Les statistiques par type de problème (nombre de notes, moyenne et somme des évaluations) sont calculées sans IA (`problemStats`).
+
+Règles des notes (`lib/db/repo.ts`) :
+- la note est écrite par le responsable de la tâche ou par le chef de projet ;
+- l'évaluation de 1 à 5 est proposée par l'un ou l'autre ;
+- la case « Validé » est réservée au chef de projet et demande une note et une évaluation ;
+- toute modification de la note ou de l'évaluation décoche la validation ;
+- tout est journalisé dans l'historique de la tâche.
+
 ## Parcours d'une demande
 
 ```

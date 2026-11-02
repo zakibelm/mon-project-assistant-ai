@@ -3,6 +3,7 @@
  * entre deux projets. Les prénoms sont fictifs. Ne fait rien si la base contient
  * déjà une organisation.
  */
+import { and, eq } from "drizzle-orm";
 import type { Db } from "./client";
 import * as s from "./schema";
 
@@ -93,5 +94,21 @@ export async function seedDemo(db: Db) {
         { name: "Formation", tasks: [["Former l'équipe commerciale", "todo", "Zaki", "2026-12-09", "Moyenne"]] },
       ],
     });
+
+    // Notes d'explication : deux évaluées et validées par le chef de projet, une évaluée par son auteur et en attente de validation.
+    async function note(projectId: string, task: string, author: string, problemType: (typeof s.PROBLEM_TYPES)[number], problem: string, resolution: string, rating: number, validated: boolean) {
+      await tx.update(s.tasks).set({
+        problemType, noteProblem: problem, noteResolution: resolution, noteAuthorId: m[author], noteUpdatedAt: new Date(),
+        rating, ratedById: validated ? m.Zaki : m[author], ratedAt: new Date(),
+        validated, validatedById: validated ? m.Zaki : null, validatedAt: validated ? new Date() : null,
+      }).where(and(eq(s.tasks.projectId, projectId), eq(s.tasks.name, task)));
+    }
+    await note("prj_site", "Valider la maquette de la page d'accueil", "Léa", "dependance_externe",
+      "Le client a mis 4 jours à donner son retour sur la maquette, ce qui a repoussé la validation.",
+      "Relance quotidienne puis validation en visioconférence de 30 minutes avec le client.", 4, true);
+    await note("prj_crm", "Inventorier les champs de l'ancien CRM", "Inès", "sous_estimation",
+      "Il y avait trois fois plus de champs personnalisés que prévu.", "Une demi-journée ajoutée et tri des champs inutilisés avec l'équipe commerciale.", 2, true);
+    await note("prj_crm", "Exporter les contacts", "Sami", "probleme_technique",
+      "L'ancien CRM limite l'export à 1 000 contacts par fichier.", "Export en 6 tranches, puis fusion des fichiers avec un script.", 3, false);
   });
 }

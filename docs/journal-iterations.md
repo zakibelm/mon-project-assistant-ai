@@ -56,7 +56,23 @@ Il n'y a pas encore d'utilisateurs réels ni d'analytique. On mesure donc un **i
   - montrer la conséquence tout de suite est un gain qualitatif : la surcharge passe de Sami à Zaki dès qu'il reprend une tâche ;
   - mesurer la référence avec une IA parfaite reste honnête et laisse quand même un écart net.
 
+### 4. Notes de retard, évaluation, validation et leçons apprises (demande de l'utilisateur)
+- **Changement :**
+  - dans le tableau des tâches, colonnes Notes, Évaluation (1 à 5) et Validé, cette dernière réservée au chef de projet ;
+  - une page « Leçons apprises » : des statistiques sans IA, et une synthèse par l'IA des seules notes validées, pondérées par leur évaluation.
+- **Mesure :** pas de version de référence comparable, la fonction n'existait pas. Indicateur suivi à partir de maintenant : **part des retards ayant une note validée**, de 0 % possible avant à mesurable maintenant.
+- **Vérifié :**
+  - les permissions (case grisée pour un non-chef de projet, note non modifiable par un autre membre) ;
+  - la validation décochée à chaque modification ;
+  - les sources inventées par le modèle écartées et le poids recalculé côté serveur ;
+  - l'affichage sur un écran de 1366 px sans défilement horizontal du tableau, après regroupement de la priorité et des sous-tâches sous le nom de la tâche.
+- **Appris :**
+  - ajouter des colonnes à un tableau déjà large les cache hors de l'écran : il faut compacter les colonnes secondaires plutôt que de faire défiler ;
+  - un éditeur ouvert dans un tableau défilant est coupé : il faut l'ouvrir sous le tableau ;
+  - en test, une case pilotée par le serveur ne change qu'après sa réponse. Il faut attendre l'état confirmé, sur un serveur neuf à chaque essai : un clic de plus la décoche.
+
 ## Prochaines pistes (non testées)
 
-- **Collecte des explications de retard (phase D).** Le cœur de la vision n'a pas encore d'interface : aujourd'hui, « Demander la cause » ne poste qu'un message. À mesurer : part des retards ayant une cause catégorisée et évaluée.
+- **Demander la note directement au responsable depuis le point du jour.** Un lien vers le formulaire de note, au lieu d'un simple message. À mesurer : délai entre le retard et la note validée.
+- **Utiliser les leçons au cadrage.** Le brouillon d'un nouveau projet cite les leçons pertinentes. À mesurer : part des recommandations reprises dans le plan.
 - **Point du jour par courriel.** L'utilisateur n'a plus à ouvrir l'application pour décider. À mesurer : délai entre l'apparition d'un point et sa résolution.

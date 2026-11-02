@@ -92,8 +92,8 @@ L'IA apprend de la cause retenue, pondérée par ce poids : une explication not�
 | A. Base de données ✅ | PostgreSQL (PGlite en développement et en tests, PostgreSQL sur le VPS ou un service géré en production), accès via Drizzle ; modèle multi-projets (organisation, portefeuille, projets, membres partagés) ; historique des changements de statut et de date | Les données survivent au redémarrage ; on sait quand chaque tâche a changé ; deux projets coexistent dans la même organisation |
 | B. Contexte et plan ✅ (première version) | Fiche projet (description, livrables, faits saillants, parties prenantes, équipe), génération du plan, plan de référence figé | À partir d'une fiche projet, l'assistant propose un plan validable en un clic |
 | C. Suivi quotidien | Tâche planifiée chaque matin, détection des retards, point du matin | Chaque matin, un point liste ce qui avance, ce qui glisse et ce qu'il faut décider |
-| D. Explications | Demande de cause au responsable, catégories, nouvelle date ; évaluation par le chef de projet (poids 1 à 5, catégorie corrigée) | Chaque retard a une cause enregistrée et évaluée |
-| E. Apprentissage | Statistiques des causes, ajustement des estimations, registre des leçons | Au cadrage suivant, l'assistant cite les leçons pertinentes |
+| D. Explications ✅ (première version) | Demande de cause au responsable, catégories, nouvelle date ; évaluation par le chef de projet (poids 1 à 5, catégorie corrigée) | Chaque retard a une cause enregistrée et évaluée |
+| E. Apprentissage ✅ (première version) | Statistiques des causes, ajustement des estimations, registre des leçons | Au cadrage suivant, l'assistant cite les leçons pertinentes |
 | F. Canaux | Courriel, puis Slack ou Teams | Les membres répondent sans ouvrir l'application |
 
 Les essais se font avec des membres numérotés jusqu'à la fin de la phase E.
@@ -110,6 +110,8 @@ Les essais se font avec des membres numérotés jusqu'à la fin de la phase E.
 - 2026-11-02 : la cible est un outil de PMO multi-projets ; le modèle de données est multi-projets dès la phase A.
 - 2026-11-02 : hébergement de production sur le VPS (Docker : PostgreSQL + application, nginx devant).
 - 2026-11-02 : PostgreSQL dès le départ (remplace le choix initial de SQLite), à cause des écritures simultanées du suivi multi-projets et d'un futur usage par plusieurs organisations. PGlite garde la simplicité d'un fichier en développement et en tests.
+
+- 2026-11-02 : dans le tableau des tâches, colonnes **Notes**, **Évaluation (1 à 5)** et **Validé**. Le responsable écrit la note (type de problème, problème, résolution) et propose une évaluation. Le chef de projet peut la corriger et il est le seul à cocher « Validé ». Seules les notes validées alimentent les leçons apprises ; toute modification décoche la validation.
 
 ## Questions encore ouvertes
 

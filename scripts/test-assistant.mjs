@@ -19,6 +19,15 @@ const mock = http.createServer((req, res) => {
     const usage = { input_tokens: 900, output_tokens: 120, cache_read_input_tokens: 1500, cache_creation_input_tokens: 0 };
     const msg = (content, stop_reason) => send(200, { id: "msg_" + seen.length, type: "message", role: "assistant", model: json.model, content, stop_reason, stop_sequence: null, usage });
 
+    if (json.tools?.[0]?.name === "record_lessons") {
+      if (scenario === "nolessons") return msg([{ type: "text", text: "Rien à dire." }], "end_turn");
+      const notes = JSON.parse(json.messages[0].content.slice(json.messages[0].content.indexOf("[")));
+      const ext = notes.find((n) => n.type === "Dépendance externe");
+      return msg([{ type: "tool_use", id: "tu_l", name: "record_lessons", input: { lessons: [
+        { problem_type: "dependance_externe", title: "Prévoir les délais de réponse des tiers", problem: "Un tiers tarde à répondre.",
+          resolution: "Relance quotidienne et réunion courte.", recommendation: "Fixer dès le cadrage un délai de réponse avec les tiers.", source_task_ids: [ext.id, "inventé"] },
+      ] } }], "tool_use");
+    }
     if (json.tools?.[0]?.name === "propose_project") {
       if (scenario === "nodraft") return msg([{ type: "text", text: "Pouvez-vous préciser ?" }], "end_turn");
       return msg([{ type: "tool_use", id: "tu_d", name: "propose_project", input: {
@@ -184,6 +193,37 @@ try {
   assert.match(sb.board.notifications[0].text, /Sami a été mentionné/);
   assert.equal(seen.length, before, "aucun appel d'IA pour résoudre sur place");
 
+  // 1 quinquies. Notes, évaluation, validation par le chef de projet, puis leçons apprises
+  const put = (path, body) => fetch(base + path, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }).then(async (r) => ({ status: r.status, data: await r.json() }));
+  const crm = await fetch(base + "/api/projects/prj_crm").then((r) => r.json());
+  assert.equal(crm.me, "Zaki");
+  assert.ok(crm.board.members.find((m) => m.name === "Zaki").isManager, "Zaki est chef de projet");
+  const exp = crm.board.items.find((i) => i.name === "Exporter les contacts");
+  assert.equal((await put(`/api/tasks/${exp.id}/validation`, { validated: true })).status, 200);
+  const l0 = await fetch(base + "/api/lessons").then((r) => r.json());
+  assert.equal(l0.notes.length, 3, "3 notes validées");
+  const clean = crm.board.items.find((i) => i.name === "Nettoyer les doublons");
+  assert.equal((await put(`/api/tasks/${clean.id}/note`, { problemType: "surcharge", problem: "x" })).status, 400, "note trop courte");
+  const nn = await put(`/api/tasks/${clean.id}/note`, { problemType: "surcharge", problem: "Inès était prise sur deux projets.", resolution: "Tâche décalée d'une semaine." });
+  assert.equal(nn.status, 200);
+  assert.equal((await put(`/api/tasks/${clean.id}/validation`, { validated: true })).status, 403, "pas d'évaluation : validation refusée");
+  assert.equal((await put(`/api/tasks/${clean.id}/rating`, { rating: 9 })).status, 400);
+  await put(`/api/tasks/${clean.id}/rating`, { rating: 5 });
+  const vv = await put(`/api/tasks/${clean.id}/validation`, { validated: true });
+  assert.equal(vv.data.board.items.find((i) => i.id === clean.id).note.validated, true);
+  const before2 = seen.length;
+  const lessons = await post("/api/lessons", { projectId: null });
+  assert.equal(lessons.status, 200, JSON.stringify(lessons.data));
+  assert.equal(seen.length, before2 + 1, "un seul appel d'IA");
+  assert.match(seen.at(-1).body.messages[0].content, /"evaluation":5/, "les évaluations sont transmises au modèle");
+  const lesson = lessons.data.lessons[0];
+  assert.equal(lesson.weight, 4, "poids calculé à partir des évaluations réelles des sources");
+  assert.equal(lesson.sourceTaskIds.length, 1, "source inventée par le modèle écartée");
+  assert.equal((await fetch(base + "/api/lessons").then((r) => r.json())).lessons.length, 1, "leçons enregistrées");
+  scenario = "nolessons";
+  assert.equal((await post("/api/lessons", { projectId: "prj_crm" })).status, 422);
+  scenario = "plan";
+
   // 2. Refus du filtre de sécurité
   scenario = "refusal";
   const r2 = await ask("…");
@@ -202,7 +242,7 @@ try {
   const r5 = await fetch(base + "/api/assistant", { method: "POST", body: JSON.stringify({ projectId: "inconnu", message: "x" }) });
   assert.equal(r5.status, 404);
 
-  console.log("OK : 9 scénarios passés (point du jour, nouveau projet, responsable, résolution sur place, planification avec outils et historique, refus, clé refusée, requête invalide, projet inconnu)");
+  console.log("OK : 10 scénarios passés (point du jour, nouveau projet, responsable, résolution sur place, notes et leçons, planification avec outils et historique, refus, clé refusée, requête invalide, projet inconnu)");
 } catch (e) {
   console.error(e.message, "\n--- logs app ---\n", logs.slice(-2000));
   process.exitCode = 1;

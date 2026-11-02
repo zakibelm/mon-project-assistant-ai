@@ -1,5 +1,32 @@
 /** Types de vue partagés entre le serveur, l'assistant et l'interface. */
-import { TASK_PRIORITIES, TASK_STATUSES } from "@/lib/db/schema";
+import { PROBLEM_TYPES, TASK_PRIORITIES, TASK_STATUSES } from "@/lib/db/schema";
+
+export { PROBLEM_TYPES };
+export type ProblemType = (typeof PROBLEM_TYPES)[number];
+export const PROBLEM_LABEL: Record<ProblemType, string> = {
+  dependance_externe: "Dépendance externe",
+  sous_estimation: "Sous-estimation",
+  information_manquante: "Information manquante",
+  changement_perimetre: "Changement de périmètre",
+  surcharge: "Surcharge",
+  probleme_technique: "Problème technique",
+  autre: "Autre",
+};
+
+/** Note d'explication d'une tâche et son évaluation par le chef de projet. */
+export interface TaskNote {
+  problemType: ProblemType | null;
+  problem: string;
+  resolution: string;
+  author: string | null;
+  updatedAt: string | null;
+  /** 1 à 5, proposée par le responsable ou le chef de projet ; null = pas encore évaluée. */
+  rating: number | null;
+  ratedBy: string | null;
+  /** Case cochée par le chef de projet : la note et son évaluation servent à l'apprentissage. */
+  validated: boolean;
+  validatedBy: string | null;
+}
 
 export const STATUSES = TASK_STATUSES;
 export type Status = (typeof STATUSES)[number];
@@ -27,6 +54,9 @@ export interface Item {
   priority: Priority;
   subtasks: Subtask[];
   comments: Comment[];
+  note: TaskNote | null;
+  /** En retard (échéance dépassée, ou terminée / reportée après la date du plan de référence) : une explication est attendue. */
+  late: boolean;
 }
 
 export interface Group { id: string; name: string }
@@ -40,7 +70,7 @@ export interface Board {
   description: string;
   startDate: string | null;
   endDate: string | null;
-  members: { name: string; role: string }[];
+  members: { name: string; role: string; isManager: boolean }[];
   deliverables: { name: string; due: string | null }[];
   stakeholders: { name: string; role: string }[];
   groups: Group[];

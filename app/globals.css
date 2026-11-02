@@ -185,3 +185,60 @@ select.owner[data-empty="true"]{color:var(--st-block)}
 .card.resolved .stripe{background:var(--st-done)}
 .card.resolved .kind{color:var(--st-done)}
 .done-line{margin:2px 0 0;font-size:14px;color:var(--ink)}
+
+/* notes, évaluation, validation */
+.note-summary{margin:4px 0 0;font-size:13px;color:var(--st-doing);font-weight:500}
+td.c-note{max-width:240px}
+.note-btn{display:flex;flex-direction:column;align-items:flex-start;gap:1px;border:1px solid transparent;background:transparent;border-radius:6px;padding:2px 6px;margin:-2px -6px;text-align:left;color:var(--ink);max-width:100%}
+.note-btn:hover{border-color:var(--line);background:var(--bg)}
+.note-btn .excerpt{font-size:12px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.note-btn.due{color:var(--st-block);font-weight:600;font-size:13px}
+.note-btn.add{color:var(--muted);font-size:13px}
+.ptype{font-family:var(--f-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--accent)}
+.stars{display:inline-flex;gap:1px;white-space:nowrap}
+.stars button{border:0;background:transparent;padding:0 1px;font-size:17px;line-height:1;color:var(--line)}
+.stars button.on,.stars span.on{color:var(--st-doing)}
+.stars.ro span{font-size:15px;color:var(--line)}
+.stars button:disabled{cursor:default}
+.rating-cell{display:inline-flex;flex-direction:column;gap:2px}
+.pending{font-size:11px;color:var(--st-doing);font-weight:500}
+.validate-box{display:inline-flex;align-items:center;gap:6px;font-size:13px;white-space:nowrap;color:var(--muted)}
+.validate-box.on{color:var(--st-done);font-weight:600}
+.validate-box input{width:16px;height:16px;accent-color:var(--st-done)}
+.validate-box input:disabled{cursor:not-allowed}
+tr.editor-row > td{background:var(--sunken)}
+.note-editor{display:flex;flex-direction:column;gap:10px;padding:4px 0}
+.note-grid{display:grid;grid-template-columns:220px minmax(0,1fr) minmax(0,1fr);gap:10px}
+@media (max-width:900px){.note-grid{grid-template-columns:minmax(0,1fr)}}
+.note-grid label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);min-width:0}
+.note-grid select,.note-grid textarea{border:1px solid var(--line);border-radius:8px;padding:7px 9px;background:var(--surface);color:var(--ink);font:inherit;font-size:14px;resize:vertical}
+.note-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.warn{margin:0;font-size:13px;color:var(--st-doing)}
+.validate{display:flex;align-items:center;gap:14px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:10px}
+.validate .muted{flex:1 1 300px}
+/* leçons apprises */
+.lessons-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-top:22px}
+.lessons-head h1{font-family:var(--f-display);font-size:clamp(24px,4vw,32px);margin:0 0 4px;letter-spacing:-.015em}
+.lessons-head p{margin:0;max-width:70ch}
+.lessons-cta{display:flex;gap:8px;flex-wrap:wrap}
+.lessons-cta select{border:1px solid var(--line);border-radius:8px;padding:7px 10px;background:var(--surface);color:var(--ink);font:inherit}
+.lessons-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:16px;margin-top:16px;align-items:start}
+@media (max-width:980px){.lessons-grid{grid-template-columns:minmax(0,1fr)}}
+.stat{margin-bottom:10px}
+.stat-row{display:flex;justify-content:space-between;gap:10px;font-size:14px;margin-bottom:4px;flex-wrap:wrap}
+.vnotes{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.vnotes li,.lesson{border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:14px}
+.vnotes p,.lesson p{margin:4px 0 0}
+.vtop{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}
+.lesson{margin-bottom:10px}
+.lesson h3{margin:2px 0 4px;font-size:16px}
+.lesson .reco{background:var(--accent-soft);border-radius:6px;padding:6px 8px}
+.tscroll td:first-child{min-width:200px}
+table.wide{min-width:980px}
+.note-panel{margin-top:8px;background:var(--surface);border:1px solid var(--accent);border-radius:var(--r);padding:12px 14px}
+.note-panel-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px}
+.stars.ro span.on{color:var(--st-doing)}
+.panel .lesson h3,.lesson h3{font-family:var(--f-body);text-transform:none;letter-spacing:0;color:var(--ink);font-size:16px;font-weight:600;margin:2px 0 4px}
+.tmeta{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+table.wide{min-width:820px}
+@media (min-width:981px){.layout{grid-template-columns:minmax(0,1fr) 340px}}
