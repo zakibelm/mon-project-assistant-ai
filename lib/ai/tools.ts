@@ -5,7 +5,9 @@ import {
   Actor, addComment, BoardError, createAutomation, createGroup, createTasks, deleteTask, updateTask,
 } from "@/lib/db/repo";
 import { Board, PRIORITIES, STATUSES, STATUS_LABEL } from "@/lib/board/types";
-import { formatExtracts, searchKnowledge } from "@/lib/rag/index";
+import { formatExtracts, listProjectDocs, searchKnowledge, searchProjectDocs } from "@/lib/rag/index";
+import { eq } from "drizzle-orm";
+import { projects } from "@/lib/db/schema";
 
 /* Schémas de validation (les entrées du modèle sont validées avant exécution). */
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date attendue au format AAAA-MM-JJ");
@@ -34,6 +36,7 @@ const schemas = {
   add_comment: z.object({ item_id: z.string(), text: z.string().min(1) }),
   create_automation: z.object({ on_status: z.enum(STATUSES), notify: z.string() }),
   search_knowledge: z.object({ query: z.string().trim().min(2).max(300) }),
+  search_project_documents: z.object({ query: z.string().trim().min(2).max(300) }),
 };
 export type ToolName = keyof typeof schemas;
 
@@ -41,7 +44,12 @@ export type ToolName = keyof typeof schemas;
 export const TOOLS: Anthropic.Tool[] = [
   {
     name: "search_knowledge",
-    description: "Cherche dans la base de connaissances métier du PMO (méthodes, règles, glossaire : dossier rag/). À utiliser pour toute question de méthode ou de règle (retards, blocages, escalade, planification, estimation, rapports, leçons apprises). Renvoie des extraits avec leur fichier source.",
+    description: "Cherche dans la base de connaissances MÉTIER du PMO (méthodes, règles, glossaire : dossier rag-metier/). À utiliser pour toute question de méthode ou de règle (retards, blocages, escalade, planification, estimation, rapports, leçons apprises). Renvoie des extraits avec leur fichier source.",
+    input_schema: { type: "object", properties: { query: { type: "string", description: "La question ou les mots-clés, en français" } }, required: ["query"] },
+  },
+  {
+    name: "search_project_documents",
+    description: "Cherche dans les DOCUMENTS DE CE PROJET (dossier rag-client/ du projet : fiche projet, comptes rendus, échanges avec le client, exigences, décisions). À utiliser pour toute question sur ce projet précis : qui a décidé quoi, contacts, exigences du client, accès, points ouverts. Ne lit que le dossier de ce projet. Renvoie des extraits avec leur fichier source.",
     input_schema: { type: "object", properties: { query: { type: "string", description: "La question ou les mots-clés, en français" } }, required: ["query"] },
   },
   {
@@ -158,6 +166,15 @@ export async function runTool(db: Db, projectId: string, actor: Actor, name: str
           ? { content: formatExtracts(hits), isError: false }
           : { content: "Aucun extrait pertinent dans la base de connaissances.", isError: false };
       }
+      case "search_project_documents": {
+        // Cloisonnement : uniquement le dossier du projet en cours.
+        const [p] = await db.select({ dir: projects.docsDir }).from(projects).where(eq(projects.id, projectId));
+        if (!p?.dir) return { content: "Ce projet n'a pas de dossier de documents.", isError: false };
+        const hits = searchProjectDocs(p.dir, (parsed.data as z.infer<typeof schemas.search_project_documents>).query, 4);
+        return hits.length
+          ? { content: formatExtracts(hits), isError: false }
+          : { content: "Aucun extrait pertinent dans les documents de ce projet.", isError: false };
+      }
       case "create_automation": {
         const d = parsed.data as z.infer<typeof schemas.create_automation>;
         const a = await createAutomation(db, projectId, d.on_status, d.notify);
@@ -188,5 +205,12 @@ export function boardSnapshot(board: Board) {
       last_comment: i.comments.at(-1) ? `${i.comments.at(-1)!.author} : ${i.comments.at(-1)!.text}` : undefined,
     })),
     automations: board.automations.map((a) => `${a.onStatus} → ${a.notify}`),
+    documents: projectDocTitles(board.docsDir),
   };
+}
+
+/** Titres des documents du dossier du projet (pour que le modèle sache ce qu'il peut y chercher). */
+function projectDocTitles(dir: string | null) {
+  if (!dir) return [];
+  try { return listProjectDocs(dir).map((d) => `${d.source} — ${d.title}`); } catch { return []; }
 }

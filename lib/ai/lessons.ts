@@ -47,7 +47,7 @@ const SYSTEM = `Tu es l'analyste d'un bureau de projets (PMO) francophone. On te
 
 L'évaluation mesure la fiabilité et l'utilité de l'explication : 5 = cause réelle, bien comprise, leçon importante ; 1 = explication peu crédible ou peu utile. Pondère en conséquence : une leçon doit s'appuyer surtout sur des notes évaluées 4 ou 5 ; une note évaluée 1 ou 2 ne peut justifier une leçon que si d'autres notes la confirment.
 
-Des extraits de la base de connaissances métier du PMO peuvent accompagner les notes : appuie-toi dessus pour formuler les recommandations, mais ne les présente pas comme des faits observés dans les projets.
+Des extraits de la base de connaissances métier du PMO (rag-metier/) peuvent accompagner les notes : appuie-toi dessus pour formuler les recommandations, mais ne les présente pas comme des faits observés dans les projets.
 
 Regroupe les notes par type de problème et produis des leçons utiles pour les prochains projets : le problème généralisé, la résolution qui a marché, et une recommandation concrète à appliquer dès le cadrage. N'invente rien qui ne soit pas dans les notes. Cite les identifiants des notes sources. Écris en français, de façon courte et concrète. Appelle record_lessons une seule fois.`;
 

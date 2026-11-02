@@ -44,6 +44,8 @@ export const projects = pgTable("projects", {
   startDate: date("start_date", { mode: "string" }),
   endDate: date("end_date", { mode: "string" }),
   status: text("status", { enum: ["draft", "active", "on_hold", "closed"] }).notNull().default("active"),
+  /** Dossier des documents du projet dans rag-client/ (base de connaissances client). */
+  docsDir: text("docs_dir").unique(),
   createdAt: createdAt(),
 }, (t) => [index("projects_org_idx").on(t.orgId)]);
 

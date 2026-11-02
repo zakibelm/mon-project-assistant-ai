@@ -113,7 +113,7 @@ Les essais se font avec des membres numérotés jusqu'à la fin de la phase E.
 
 - 2026-11-02 : dans le tableau des tâches, colonnes **Notes**, **Évaluation (1 à 5)** et **Validé**. Le responsable écrit la note (type de problème, problème, résolution) et propose une évaluation. Le chef de projet peut la corriger et il est le seul à cocher « Validé ». Seules les notes validées alimentent les leçons apprises ; toute modification décoche la validation.
 
-- 2026-11-02 : base de connaissances métier (dossier `rag/`) consultée par l'IA (assistant, cadrage, leçons), avec citation des sources. Recherche plein texte locale pour commencer, recherche par le sens si la base grossit.
+- 2026-11-02 : deux bases de connaissances consultées par l'IA avec citation des sources : **métier** (`rag-metier/`, commune) et **client** (`rag-client/`, un dossier par projet avec tous ses éléments, cloisonné : l'assistant d'un projet ne lit que son dossier). Recherche plein texte locale pour commencer, recherche par le sens si les bases grossissent.
 
 ## Questions encore ouvertes
 

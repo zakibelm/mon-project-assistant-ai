@@ -7,6 +7,8 @@ import type { Db } from "./client";
 import * as s from "./schema";
 import { Board, Priority, ProblemType, ProjectSummary, Status, STATUS_LABEL } from "@/lib/board/types";
 
+import { ensureProjectFolder, projectFiche, slugify } from "@/lib/rag/index";
+
 /** Le chef de projet est le membre dont le rôle dans le projet contient « chef de projet ». */
 export const isManagerRole = (role: string) => /chef de projet/i.test(role);
 
@@ -64,7 +66,7 @@ export async function getBoard(db: Db, projectId: string): Promise<Board | null>
   const nameOf = new Map(allMembers.map((m) => [m.id, m.name]));
 
   return {
-    projectId: p.id, orgId: p.orgId, name: p.name, description: p.description, startDate: p.startDate, endDate: p.endDate,
+    projectId: p.id, orgId: p.orgId, name: p.name, description: p.description, startDate: p.startDate, endDate: p.endDate, docsDir: p.docsDir,
     members: team.map((m) => ({ name: m.name, role: m.role, isManager: isManagerRole(m.role) })),
     deliverables: deliverables.map((d) => ({ name: d.name, due: d.dueDate })),
     stakeholders: stakeholders.map((x) => ({ name: x.name, role: x.role })),
@@ -394,10 +396,14 @@ export interface ProjectInput {
  * le plan de référence.
  */
 export async function createProjectFromDraft(db: Db, orgId: string, actor: Actor, d: ProjectInput) {
-  return db.transaction(async (tx) => {
+  const base = slugify(d.name);
+  const taken = new Set((await db.select({ dir: s.projects.docsDir }).from(s.projects)).map((r) => r.dir));
+  let docsDir = base;
+  for (let i = 2; taken.has(docsDir); i++) docsDir = `${base}-${i}`;
+  const result = await db.transaction(async (tx) => {
     const t = tx as unknown as Db;
     const [p] = await t.insert(s.projects).values({
-      orgId, name: d.name, description: d.description, startDate: d.start_date, endDate: d.end_date,
+      orgId, name: d.name, description: d.description, startDate: d.start_date, endDate: d.end_date, docsDir,
     }).returning({ id: s.projects.id });
 
     const existing = await t.select({ id: s.members.id, name: s.members.displayName }).from(s.members).where(eq(s.members.orgId, orgId));
@@ -427,8 +433,14 @@ export async function createProjectFromDraft(db: Db, orgId: string, actor: Actor
         created++;
       }
     }
-    return { projectId: p.id, tasks: created };
+    return { projectId: p.id, tasks: created, docsDir };
   });
+  // Dossier du projet dans la base de connaissances client, avec sa fiche (hors transaction : c'est un fichier).
+  try {
+    ensureProjectFolder(docsDir, projectFiche({ name: d.name, description: d.description, start: d.start_date, end: d.end_date,
+      deliverables: d.deliverables, stakeholders: d.stakeholders, team: d.team }));
+  } catch (e) { console.error("[rag-client] dossier non créé", docsDir, e); }
+  return result;
 }
 
 /* ------------------------------------------------------------- usage de l'IA */

@@ -5,3 +5,6 @@ node_modules/
 *.tsbuildinfo
 next-env.d.ts
 .data/
+# Documents clients (rag-client/) : données confidentielles, jamais versionnées
+rag-client/*
+!rag-client/README.md

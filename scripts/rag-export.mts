@@ -1,4 +1,4 @@
-// Exporte les extraits de rag/ en JSON (pour la démo interactive, qui n'a pas accès au serveur).
+// Exporte les extraits de rag-metier/ en JSON (pour la démo interactive, qui n'a pas accès au serveur).
 const { reloadKnowledge } = await import("../lib/rag/index");
 const ix = reloadKnowledge();
 process.stdout.write(JSON.stringify({

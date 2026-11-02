@@ -3,6 +3,7 @@ import { Fragment, useState } from "react";
 import type { Board, ProblemType, Status } from "@/lib/board/types";
 import Chat, { Msg } from "./Chat";
 import { NoteCell, NoteEditor, RatingCell, RATING_HELP, ValidateCell, VALIDATE_HELP } from "./NoteCells";
+import ProjectDocs from "./ProjectDocs";
 
 const LABEL: Record<Status, string> = { todo: "À faire", doing: "En cours", block: "Bloqué", done: "Terminé" };
 const fmt = (d: string | null) => (d ? `${d.slice(8)}/${d.slice(5, 7)}` : "—");
@@ -18,6 +19,7 @@ export default function ProjectView({ board, me, msgs, busy, onSend, onAssign, o
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState<{ id: string; text: string } | null>(null);
   const [needRate, setNeedRate] = useState<string | null>(null);
+  const [tab, setTab] = useState<"tasks" | "docs">("tasks");
   if (!board) return <p className="muted" style={{ padding: 24 }}>Chargement du projet…</p>;
   const isManager = !!board.members.find((m) => m.name === me)?.isManager;
   const run = async (id: string, fn: () => Promise<string | null>) => {
@@ -58,7 +60,12 @@ export default function ProjectView({ board, me, msgs, busy, onSend, onAssign, o
             </p>
           )}
         </div>
-        {board.groups.map((g) => {
+        <div className="ptabs" role="tablist" aria-label="Contenu du projet">
+          <button role="tab" aria-selected={tab === "tasks"} onClick={() => setTab("tasks")}>Tâches</button>
+          <button role="tab" aria-selected={tab === "docs"} onClick={() => setTab("docs")}>Documents</button>
+        </div>
+        {tab === "docs" && <ProjectDocs projectId={board.projectId} />}
+        {tab === "tasks" && board.groups.map((g) => {
           const items = board.items.filter((i) => i.groupId === g.id);
           return (
             <section className="group" key={g.id}>
@@ -115,10 +122,10 @@ export default function ProjectView({ board, me, msgs, busy, onSend, onAssign, o
             </section>
           );
         })}
-        <div className="notifs">
+        {tab === "tasks" && <div className="notifs">
           Automatisations : {board.automations.map((a) => `${LABEL[a.onStatus]} → prévenir ${a.notify}`).join(" · ") || "aucune"}
           {board.notifications.length > 0 && <><br />Dernière notification : {board.notifications[0].text}</>}
-        </div>
+        </div>}
       </main>
       <Chat projectName={board.name} msgs={msgs} busy={busy} onSend={onSend} />
     </div>

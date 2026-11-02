@@ -4,6 +4,9 @@
  * déjà une organisation.
  */
 import { and, eq } from "drizzle-orm";
+import fs from "fs";
+import path from "path";
+import { clientRoot, ensureProjectFolder, projectFiche } from "@/lib/rag/index";
 import type { Db } from "./client";
 import * as s from "./schema";
 
@@ -12,6 +15,7 @@ export const DEMO_ORG_ID = "org_demo";
 export async function seedDemo(db: Db) {
   const existing = await db.select({ id: s.organizations.id }).from(s.organizations).limit(1);
   if (existing.length) return;
+  seedDemoDocuments();
 
   await db.transaction(async (tx) => {
     await tx.insert(s.organizations).values({ id: DEMO_ORG_ID, name: "PMO Démo" });
@@ -25,11 +29,11 @@ export async function seedDemo(db: Db) {
 
     type T = [name: string, status: (typeof s.TASK_STATUSES)[number], owner: string, due: string, prio: (typeof s.TASK_PRIORITIES)[number], subs?: [string, boolean][]];
     async function project(p: {
-      id: string; name: string; description: string; start: string; end: string;
+      id: string; docsDir: string; name: string; description: string; start: string; end: string;
       members: [string, string][]; deliverables: [string, string][]; stakeholders: [string, string][];
       groups: { name: string; tasks: T[] }[]; automations?: [string, string][];
     }) {
-      await tx.insert(s.projects).values({ id: p.id, orgId: DEMO_ORG_ID, portfolioId: pf.id, name: p.name, description: p.description, startDate: p.start, endDate: p.end });
+      await tx.insert(s.projects).values({ id: p.id, orgId: DEMO_ORG_ID, portfolioId: pf.id, name: p.name, description: p.description, startDate: p.start, endDate: p.end, docsDir: p.docsDir });
       await tx.insert(s.projectMembers).values(p.members.map(([n, role]) => ({ projectId: p.id, memberId: m[n], role })));
       await tx.insert(s.deliverables).values(p.deliverables.map(([name, dueDate]) => ({ projectId: p.id, name, dueDate })));
       await tx.insert(s.stakeholders).values(p.stakeholders.map(([name, role]) => ({ projectId: p.id, name, role })));
@@ -52,7 +56,7 @@ export async function seedDemo(db: Db) {
     }
 
     await project({
-      id: "prj_site", name: "Lancement du site web",
+      id: "prj_site", docsDir: "lancement-du-site-web", name: "Lancement du site web",
       description: "Refonte et mise en ligne du site vitrine de l'agence, avec pages services et formulaire de contact.",
       start: "2026-10-26", end: "2026-11-20",
       members: [["Zaki", "chef de projet"], ["Sami", "développeur"], ["Léa", "designer"], ["Inès", "communication"]],
@@ -76,7 +80,7 @@ export async function seedDemo(db: Db) {
     });
 
     await project({
-      id: "prj_crm", name: "Migration du CRM",
+      id: "prj_crm", docsDir: "migration-du-crm", name: "Migration du CRM",
       description: "Passage de l'ancien CRM à un nouvel outil, avec reprise des contacts et formation de l'équipe commerciale.",
       start: "2026-10-19", end: "2026-12-11",
       members: [["Zaki", "chef de projet"], ["Sami", "développeur"], ["Inès", "référente métier"]],
@@ -111,4 +115,71 @@ export async function seedDemo(db: Db) {
     await note("prj_crm", "Exporter les contacts", "Sami", "probleme_technique",
       "L'ancien CRM limite l'export à 1 000 contacts par fichier.", "Export en 6 tranches, puis fusion des fichiers avec un script.", 3, false);
   });
+}
+
+/** Documents d'exemple des deux projets de démonstration (rag-client/), créés s'ils n'existent pas. */
+function seedDemoDocuments() {
+  try {
+    ensureProjectFolder("lancement-du-site-web", projectFiche({
+      name: "Lancement du site web", start: "2026-10-26", end: "2026-11-20",
+      description: "Refonte et mise en ligne du site vitrine de l'agence, avec pages services et formulaire de contact.",
+      deliverables: [{ name: "Site en ligne", due: "2026-11-14" }, { name: "Annonce publique", due: "2026-11-20" }],
+      stakeholders: [{ name: "Direction de l'agence", role: "valide le contenu" }, { name: "Ancien prestataire web", role: "détient les accès au domaine" }],
+      team: [{ name: "Zaki", role: "chef de projet" }, { name: "Sami", role: "développeur" }, { name: "Léa", role: "designer" }, { name: "Inès", role: "communication" }],
+    }));
+    ensureProjectFolder("migration-du-crm", projectFiche({
+      name: "Migration du CRM", start: "2026-10-19", end: "2026-12-11",
+      description: "Passage de l'ancien CRM à un nouvel outil, avec reprise des contacts et formation de l'équipe commerciale.",
+      deliverables: [{ name: "Données migrées", due: "2026-11-27" }, { name: "Équipe formée", due: "2026-12-11" }],
+      stakeholders: [{ name: "Équipe commerciale", role: "utilisatrice finale" }, { name: "Éditeur du nouveau CRM", role: "support technique" }],
+      team: [{ name: "Zaki", role: "chef de projet" }, { name: "Sami", role: "développeur" }, { name: "Inès", role: "référente métier" }],
+    }));
+    const write = (dir: string, file: string, text: string) => {
+      const f = path.join(/*turbopackIgnore: true*/ clientRoot(), dir, file);
+      if (!fs.existsSync(f)) fs.writeFileSync(f, text, { mode: 0o640 });
+    };
+    write("lancement-du-site-web", "compte-rendu-2026-10-28.md", `---
+titre: Compte rendu de réunion du 28 octobre (exemple)
+tags: réunion, décisions, domaine, registrar, accès, maquette, client
+source: Exemple de démonstration
+---
+
+## Participants
+
+Zaki (chef de projet), Léa (design), Sami (développement), Mme Durand (directrice de l'agence, cliente).
+
+## Décisions
+
+- La maquette de la page d'accueil sera validée par Mme Durand en visioconférence, pas par courriel.
+- Le site garde le nom de domaine actuel ; aucun changement d'adresse.
+- La page « Formation » est reportée après la mise en ligne.
+
+## Accès au nom de domaine
+
+Les accès au registrar (le fournisseur du nom de domaine) sont détenus par l'ancien prestataire web, M. Roy, de l'agence Pixelnord. Mme Durand doit lui écrire pour autoriser le transfert des accès à Sami. Délai annoncé par M. Roy : 3 jours ouvrables après autorisation.
+
+## Points ouverts
+
+- Qui rédige les mentions légales ? (Zaki demande à Mme Durand)
+- Budget photo de l'équipe : à confirmer avant le 5 novembre.
+`);
+    write("migration-du-crm", "exigences-client.md", `---
+titre: Exigences de l'équipe commerciale (exemple)
+tags: exigences, champs, doublons, formation, contacts, export
+source: Exemple de démonstration
+---
+
+## Données à reprendre
+
+Tous les contacts actifs des 3 dernières années (environ 6 000), avec leur historique d'échanges. Les contacts inactifs depuis plus de 3 ans ne sont pas repris : ils sont archivés dans un fichier à part.
+
+## Doublons
+
+Un contact est un doublon s'il a la même adresse courriel. En cas de doublon, garder la fiche la plus récemment modifiée et fusionner les notes.
+
+## Formation
+
+Deux sessions de 2 heures pour les 8 commerciaux, en présentiel, la semaine du 7 décembre. Prévoir un aide-mémoire d'une page.
+`);
+  } catch (e) { console.error("[rag-client] documents d'exemple non créés", e); }
 }

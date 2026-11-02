@@ -13,6 +13,8 @@ chmod 600 .env
 # APP_URL (l'adresse publique), SEED_DEMO=1 pendant la phase de prototype.
 # La clé OpenRouter se saisit ensuite dans l'application (page Paramètres), où elle est chiffrée ;
 # OPENROUTER_API_KEY dans .env reste possible comme clé de secours.
+# Dossier des documents clients (un sous-dossier par projet) : l'application (utilisateur 1000 dans le conteneur) doit pouvoir y écrire.
+mkdir -p rag-client && sudo chown 1000:1000 rag-client && chmod 750 rag-client
 docker compose up -d --build
 docker compose logs -f app     # attendre « Ready »
 curl -s http://127.0.0.1:3000/api/projects
@@ -43,6 +45,14 @@ APP_VERSION=<étiquette> docker compose up -d --build
 ```
 
 ## Sauvegarde
+
+**Deux choses à sauvegarder ensemble :** la base PostgreSQL et le dossier `rag-client/` (documents des projets, qui ne sont pas dans Git).
+
+```bash
+tar -czf /srv/backups/rag-client-$(date +%F).tar.gz -C /srv/assistant-projet rag-client
+find /srv/backups -name 'rag-client-*.tar.gz' -mtime +14 -delete
+```
+
 
 La base vit dans le volume Docker `pgdata`. Sauvegarde quotidienne conseillée (cron) :
 

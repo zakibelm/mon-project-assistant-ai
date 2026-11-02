@@ -90,12 +90,12 @@ Règles :
 - Plan : 2 à 6 phases, 3 à 8 tâches par phase, chaque tâche assignée à un membre de l'équipe, avec une échéance entre le début et la fin du projet. Répartis la charge. Mets les tâches qui conditionnent les autres en premier et en priorité Haute.
 - Livrables : ceux que le texte cite, sinon ceux qui découlent clairement de l'objectif.
 - Écris en français, avec des noms de tâches courts commençant par un verbe.
-- Des extraits de la base de connaissances métier du PMO peuvent accompagner le texte : applique leurs règles quand elles s'appliquent (ordre des tâches, marges, dépendances, validations).`;
+- Des extraits de la base de connaissances métier du PMO (rag-metier/) peuvent accompagner le texte : applique leurs règles quand elles s'appliquent (ordre des tâches, marges, dépendances, validations).`;
 
 export class DraftError extends Error {}
 
 export async function draftProject(ai: Ai, text: string, existingMembers: string[], today = new Date().toISOString().slice(0, 10)) {
-  // Connaissances métier pertinentes pour ce projet (recherche dans rag/), jointes au texte.
+  // Connaissances métier pertinentes pour ce projet (recherche dans rag-metier/), jointes au texte.
   const knowledge = searchKnowledge(`planification découpage dépendances marge ${text.slice(0, 600)}`, 4);
   const response = await ai.client.messages.create({
     model: ai.model,

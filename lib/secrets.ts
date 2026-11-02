@@ -17,7 +17,7 @@ function masterKey(): Buffer {
   if (process.env.NODE_ENV === "production" && process.env.DATABASE_URL) {
     throw new SecretError("APP_SECRET manquant : il est obligatoire en production pour chiffrer la clé d'IA (voir .env.example).");
   }
-  const file = path.join(process.cwd(), ".data", "app-secret");
+  const file = path.join(/*turbopackIgnore: true*/ process.cwd(), ".data", "app-secret");
   if (!fs.existsSync(file)) {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, randomBytes(32).toString("base64"), { mode: 0o600 });

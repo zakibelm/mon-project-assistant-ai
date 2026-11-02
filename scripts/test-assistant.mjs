@@ -4,6 +4,12 @@
 import { spawn } from "node:child_process";
 import http from "node:http";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+
+// Documents clients écrits dans un dossier temporaire, jamais dans le dépôt.
+const RAG_CLIENT_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "rag-client-"));
 
 const MOCK_PORT = 4555, APP_PORT = 3999;
 const seen = [];
@@ -21,11 +27,17 @@ const mock = http.createServer((req, res) => {
 
     if (!json.tools) return msg([{ type: "text", text: "OK" }], "end_turn"); // test de connexion (Paramètres)
     if (scenario === "echo") return msg([{ type: "text", text: "Bien reçu." }], "end_turn");
+    if (scenario === "ragclient") {
+      const lastMsg = json.messages.at(-1);
+      const res = Array.isArray(lastMsg.content) ? lastMsg.content.find((b) => b.type === "tool_result") : null;
+      if (!res) return msg([{ type: "tool_use", id: "tu_p", name: "search_project_documents", input: { query: "qui détient les accès au registrar" } }], "tool_use");
+      return msg([{ type: "text", text: "M. Roy, de Pixelnord (rag-client/lancement-du-site-web/compte-rendu-2026-10-28.md)." }], "end_turn");
+    }
     if (scenario === "rag") {
       const lastMsg = json.messages.at(-1);
       const res = Array.isArray(lastMsg.content) ? lastMsg.content.find((b) => b.type === "tool_result") : null;
       if (!res) return msg([{ type: "tool_use", id: "tu_k", name: "search_knowledge", input: { query: "quand escalader au PMO" } }], "tool_use");
-      return msg([{ type: "text", text: "Au-delà de 3 jours de blocage, escaladez (rag/pmo/roles-et-gouvernance.md)." }], "end_turn");
+      return msg([{ type: "text", text: "Au-delà de 3 jours de blocage, escaladez (rag-metier/pmo/roles-et-gouvernance.md)." }], "end_turn");
     }
     if (json.tools?.[0]?.name === "record_lessons") {
       if (scenario === "nolessons") return msg([{ type: "text", text: "Rien à dire." }], "end_turn");
@@ -82,7 +94,7 @@ const mock = http.createServer((req, res) => {
 await new Promise((r) => mock.listen(MOCK_PORT, r));
 
 const app = spawn("npx", ["next", "start", "-p", String(APP_PORT)], {
-  env: { ...process.env, PGLITE_DIR: "memory://", DATABASE_URL: "", OPENROUTER_API_KEY: "sk-or-test", AI_BASE_URL: `http://127.0.0.1:${MOCK_PORT}`, NEXT_TELEMETRY_DISABLED: "1" },
+  env: { ...process.env, RAG_CLIENT_DIR, PGLITE_DIR: "memory://", DATABASE_URL: "", OPENROUTER_API_KEY: "sk-or-test", AI_BASE_URL: `http://127.0.0.1:${MOCK_PORT}`, NEXT_TELEMETRY_DISABLED: "1" },
   stdio: ["ignore", "pipe", "pipe"],
   detached: true,
 });
@@ -135,7 +147,7 @@ try {
   assert.deepEqual(first.body.system[0].cache_control, { type: "ephemeral" });
   const ctx = first.body.messages.at(-1).content[0].text;
   assert.match(ctx, /"deliverables":\[\{"name":"Site en ligne"/, "le contexte du projet est envoyé au modèle");
-  assert.deepEqual(first.body.tools.map((t) => t.name), ["search_knowledge", "create_group", "create_items", "update_item", "delete_item", "add_comment", "create_automation"]);
+  assert.deepEqual(first.body.tools.map((t) => t.name), ["search_knowledge", "search_project_documents", "create_group", "create_items", "update_item", "delete_item", "add_comment", "create_automation"]);
   const third = seen[2].body.messages.at(-1).content;
   assert.equal(third.find((b) => b.tool_use_id === "tu_3").is_error, true, "erreur de validation renvoyée au modèle");
   assert.equal(seen.length, 3);
@@ -158,6 +170,10 @@ try {
   const created = await fetch(`${base}/api/projects/${c1.data.projectId}`).then((r) => r.json());
   assert.equal(created.board.items.find((i) => i.name === "Développer la réservation").owner, "Karim");
   assert.ok(created.board.items.every((i) => i.baselineDue === i.due));
+  const newDocs = await fetch(`${base}/api/projects/${c1.data.projectId}/documents?q=objectif`).then((r) => r.json());
+  assert.equal(newDocs.folder, "rag-client/application-clinique", "dossier créé à la création du projet");
+  assert.equal(newDocs.docs[0].file, "fiche-projet.md");
+  assert.match(newDocs.results[0].text, /Réservation en ligne/);
   const briefAfter = await fetch(base + "/api/brief").then((r) => r.json());
   assert.ok(briefAfter.pulse.some((p) => p.id === c1.data.projectId), "le nouveau projet apparaît dans le portefeuille");
   assert.equal((await post("/api/projects/draft", { text: "trop court" })).status, 400);
@@ -265,21 +281,47 @@ try {
   assert.equal(seen.at(-1).auth, "Bearer sk-or-test", "clé supprimée : repli sur la clé du serveur");
   scenario = "plan";
 
-  // 1 septies. Base de connaissances (rag/) : liste, recherche, outil de l'assistant, extraits joints au cadrage
+  // 1 septies. Base de connaissances métier (rag-metier/) : liste, recherche, outil de l'assistant, extraits joints au cadrage
   const k = await fetch(base + "/api/knowledge?q=" + encodeURIComponent("quand escalader au PMO")).then((r) => r.json());
-  assert.ok(k.docs.length >= 6, "documents de rag/ chargés");
-  assert.equal(k.results[0].source, "rag/pmo/roles-et-gouvernance.md");
+  assert.ok(k.docs.length >= 6, "documents de rag-metier/ chargés");
+  assert.equal(k.results[0].source, "rag-metier/pmo/roles-et-gouvernance.md");
   assert.equal(k.results[0].heading, "Règles d'escalade");
   scenario = "rag";
   const rr = await ask("Ce blocage dure depuis 4 jours, que dois-je faire ?");
   assert.equal(rr.status, 200);
-  assert.match(rr.data.reply, /rag\/pmo\/roles-et-gouvernance\.md/);
+  assert.match(rr.data.reply, /rag-metier\/pmo\/roles-et-gouvernance\.md/);
   const toolRes = seen.at(-1).body.messages.at(-1).content.find((b) => b.type === "tool_result");
   assert.match(toolRes.content, /Règles d'escalade/, "l'outil renvoie l'extrait au modèle");
   assert.match(seen.at(-1).body.system[0].text, /search_knowledge/, "le prompt système demande de consulter la base");
   scenario = "plan";
   await post("/api/projects/draft", { text: "Projet de migration avec un fournisseur externe, dépendances fortes et validations client, livraison en décembre." });
   assert.match(seen.at(-1).body.messages[0].content, /Connaissances métier du PMO \(extraits\)/, "extraits joints au cadrage");
+
+  // 1 octies. Base client : un dossier par projet, cloisonné ; ajout de documents ; outil de l'assistant
+  const sd = await fetch(base + "/api/projects/prj_site/documents?q=" + encodeURIComponent("qui détient les accès au domaine")).then((r) => r.json());
+  assert.equal(sd.folder, "rag-client/lancement-du-site-web");
+  assert.deepEqual(sd.docs.map((d) => d.file).sort(), ["compte-rendu-2026-10-28.md", "fiche-projet.md"]);
+  assert.equal(sd.results[0].source, "rag-client/lancement-du-site-web/compte-rendu-2026-10-28.md");
+  assert.match(sd.results[0].text, /Pixelnord/);
+  const cd = await fetch(base + "/api/projects/prj_crm/documents?q=" + encodeURIComponent("Pixelnord registrar accès domaine")).then((r) => r.json());
+  assert.ok(cd.results.every((h) => h.source.startsWith("rag-client/migration-du-crm/")), "cloisonnement : rien d'un autre projet");
+  assert.ok(!cd.results.some((h) => /Pixelnord/.test(h.text)));
+  const up1 = await post("/api/projects/prj_site/documents", { name: "../../etc/passwd", content: "Échange avec le client : la page Formation revient dans le périmètre en décembre." });
+  assert.equal(up1.status, 201);
+  assert.equal(up1.data.file, "passwd.md", "nom de fichier nettoyé, sans le chemin");
+  assert.ok(fs.existsSync(path.join(RAG_CLIENT_DIR, "lancement-du-site-web", "passwd.md")));
+  const up2 = await post("/api/projects/prj_site/documents", { name: "../../etc/passwd", content: "Deuxième document avec le même nom, il ne doit pas écraser le premier." });
+  assert.equal(up2.data.file, "passwd-2.md", "un fichier existant n'est jamais écrasé");
+  assert.equal((await post("/api/projects/prj_site/documents", { name: "x", content: "court" })).status, 400);
+  assert.equal((await post("/api/projects/inconnu/documents", { name: "x", content: "Un contenu suffisamment long pour passer." })).status, 404);
+  scenario = "ragclient";
+  const rc = await ask("Qui a les accès au nom de domaine ?");
+  assert.match(rc.data.reply, /Pixelnord/);
+  const ctxMsg = seen.at(-2).body.messages.at(-1).content[0].text;
+  assert.match(ctxMsg, /"documents":\[.*compte-rendu-2026-10-28\.md/, "les documents du projet sont listés dans le contexte");
+  const tr = seen.at(-1).body.messages.at(-1).content.find((b) => b.type === "tool_result");
+  assert.match(tr.content, /rag-client\/lancement-du-site-web\/compte-rendu-2026-10-28\.md/);
+  scenario = "plan";
 
   // 2. Refus du filtre de sécurité
   scenario = "refusal";
@@ -299,12 +341,13 @@ try {
   const r5 = await fetch(base + "/api/assistant", { method: "POST", body: JSON.stringify({ projectId: "inconnu", message: "x" }) });
   assert.equal(r5.status, 404);
 
-  console.log("OK : 12 scénarios passés (point du jour, nouveau projet, responsable, résolution sur place, notes et leçons, paramètres de l'IA, base de connaissances, planification avec outils et historique, refus, clé refusée, requête invalide, projet inconnu)");
+  console.log("OK : 13 scénarios passés (point du jour, nouveau projet, responsable, résolution sur place, notes et leçons, paramètres de l'IA, base métier, base client par projet, planification avec outils et historique, refus, clé refusée, requête invalide, projet inconnu)");
 } catch (e) {
   console.error(e.message, "\n--- logs app ---\n", logs.slice(-2000));
   process.exitCode = 1;
 } finally {
   try { process.kill(-app.pid); } catch {}
+  fs.rmSync(RAG_CLIENT_DIR, { recursive: true, force: true });
   mock.close();
   process.exit();
 }

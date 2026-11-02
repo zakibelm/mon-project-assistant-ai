@@ -36,18 +36,24 @@ La page **Paramètres** (en haut à droite) règle l'IA de l'organisation :
 
 Ordre de priorité : Paramètres, puis `.env`. Seuls les chefs de projet peuvent modifier ces réglages. L'adresse de la passerelle (`AI_BASE_URL`) n'est réglable que côté serveur, pour qu'on ne puisse pas détourner les appels ni la clé.
 
-## Base de connaissances métier (RAG)
+## Bases de connaissances (RAG)
 
-Le dossier [`rag/`](rag/README.md) contient les connaissances métier que l'IA consulte avant de répondre. Au départ : gestion des retards, planification, suivi et rapports, leçons apprises, rôles et gouvernance du PMO, et un glossaire. Ce sont des textes originaux, à adapter.
+Deux bases, que l'IA consulte avant de répondre, en citant ses sources :
 
-- **Format :** un fichier Markdown par sujet, avec un en-tête (`titre`, `tags`, `source`). Chaque section `##` est un extrait retrouvable.
-- **Recherche :** plein texte (BM25, `lib/rag/index.ts`), en mémoire, sans service externe ni coût. Les fichiers sont relus quand ils changent (au plus une minute après).
-- **Usage par l'IA :**
-  - l'assistant dispose de l'outil `search_knowledge` pour les questions de méthode et cite le fichier source ;
-  - le cadrage d'un projet et la synthèse des leçons reçoivent automatiquement les extraits pertinents.
-- **Paramètres :** la section « Base de connaissances » liste les documents chargés et permet de tester une recherche.
-- **Serveur :** `./rag` est monté dans le conteneur. On modifie les documents sur le VPS sans reconstruire l'image.
-- **Démo :** `npx tsx scripts/rag-export.mts` exporte les extraits en JSON pour mettre à jour la copie embarquée dans `demo/index.html`.
+| Base | Dossier | Contenu | Qui l'alimente |
+|---|---|---|---|
+| **Métier** | [`rag-metier/`](rag-metier/README.md) | Méthodes, règles du PMO, glossaire, communs à tous les projets | Le PMO (fichiers sur le serveur ou dans Git) |
+| **Client** | [`rag-client/<projet>/`](rag-client/README.md) | Un dossier par projet : fiche projet (créée automatiquement), comptes rendus, échanges avec le client, exigences, décisions | L'équipe, via l'onglet « Documents » du projet, ou des fichiers déposés sur le serveur |
+
+- **Cloisonnement :** l'assistant d'un projet ne lit que le dossier de ce projet, jamais celui d'un autre client.
+- **Outils de l'assistant :**
+  - `search_project_documents` pour les questions sur le projet (décisions, contacts, exigences) ; les documents disponibles sont listés dans son contexte ;
+  - `search_knowledge` pour les questions de méthode.
+- **Cadrage et leçons apprises :** ils reçoivent automatiquement les extraits métier pertinents.
+- **Recherche :** plein texte (BM25, `lib/rag/index.ts`), en mémoire, sans service externe ni coût. Les fichiers sont relus quand ils changent.
+- **Confidentialité :** `rag-client/` n'est jamais versionné dans Git (sauf son README) et n'entre pas dans l'image Docker. Il est monté depuis le serveur et doit être **sauvegardé avec la base de données**.
+- **Paramètres** montre la base métier ; l'onglet **Documents** de chaque projet montre la base client. Les deux permettent de tester une recherche.
+- **Démo :** `npx tsx scripts/rag-export.mts` exporte les extraits métier pour mettre à jour la copie embarquée dans `demo/index.html`.
 
 ## Démarrer en local
 
@@ -92,7 +98,9 @@ Documentation complète : `docs/assistant-ia.md`.
 | `GET /api/settings` | Paramètres de l'IA (clé jamais renvoyée : seulement sa source et ses 4 derniers caractères), droits, usage du jour |
 | `PUT /api/settings` | `{ key?, model?, dailyLimit? }` → enregistre (clé chiffrée ; `key: null` la supprime) ; réservé aux chefs de projet |
 | `POST /api/settings/test` | `{ key?, model? }` → vrai petit appel au modèle pour vérifier la clé et le modèle, sans rien enregistrer |
-| `GET /api/knowledge?q=&reload=1` | Documents de la base de connaissances ; recherche de test avec `q` ; `reload=1` relit le dossier |
+| `GET /api/knowledge?q=&reload=1` | Base métier : documents, recherche de test avec `q`, `reload=1` relit le dossier |
+| `GET /api/projects/:id/documents?q=` | Base client du projet : documents, recherche de test (cloisonnée au projet) |
+| `POST /api/projects/:id/documents` | `{ name, content }` → ajoute un document texte au dossier du projet (200 Ko au maximum, ne remplace jamais un fichier) |
 | `GET /api/lessons?projectId=` | Notes validées, statistiques par type de problème (sans IA), dernières leçons |
 | `POST /api/lessons` | `{ projectId \| null }` → synthèse des leçons par l'IA à partir des notes validées |
 | `POST /api/tasks/:id/comments` | `{ body }` → message dans le fil de la tâche (les @mentions notifient) |

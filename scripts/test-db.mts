@@ -4,6 +4,9 @@
 //   TEST_DATABASE_URL=postgresql://user@host:5432/base_de_test npm run test:db
 import assert from "node:assert/strict";
 
+// Documents clients du seed écrits dans un dossier temporaire, jamais dans le dépôt.
+const fsT = await import("node:fs"), osT = await import("node:os"), pathT = await import("node:path");
+process.env.RAG_CLIENT_DIR = fsT.mkdtempSync(pathT.join(osT.tmpdir(), "rag-client-"));
 if (process.env.TEST_DATABASE_URL) {
   process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
   process.env.SEED_DEMO = "1";

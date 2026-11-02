@@ -14,7 +14,7 @@ import { seedDemo } from "./seed";
 
 export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
 
-const MIGRATIONS = path.join(process.cwd(), "drizzle");
+const MIGRATIONS = path.join(/*turbopackIgnore: true*/ process.cwd(), "drizzle");
 
 async function open(): Promise<Db> {
   const url = process.env.DATABASE_URL;
@@ -29,7 +29,7 @@ async function open(): Promise<Db> {
     const { PGlite } = await import("@electric-sql/pglite");
     const { drizzle } = await import("drizzle-orm/pglite");
     const { migrate } = await import("drizzle-orm/pglite/migrator");
-    const dir = process.env.PGLITE_DIR || path.join(process.cwd(), ".data", "pglite");
+    const dir = process.env.PGLITE_DIR || path.join(/*turbopackIgnore: true*/ process.cwd(), ".data", "pglite");
     // PGlite ne crée pas les dossiers parents : sans ceci, le premier lancement d'un clone échoue.
     if (!dir.includes("://")) (await import("fs")).mkdirSync(dir, { recursive: true });
     const lite = drizzle({ client: new PGlite(dir), schema });

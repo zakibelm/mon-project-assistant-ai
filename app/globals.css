@@ -278,3 +278,13 @@ table.wide{min-width:820px}
 .khits p{margin:2px 0 0;font-size:13px;color:var(--muted)}
 .ksearch{display:flex;gap:8px;flex-wrap:wrap}
 .ksearch input{flex:1 1 260px;min-width:0;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg);color:var(--ink);font:inherit}
+/* onglets du projet et documents */
+.ptabs{display:flex;gap:4px;margin:14px 0 4px;border-bottom:1px solid var(--line)}
+.ptabs button{border:0;background:transparent;padding:8px 14px;color:var(--muted);font-weight:500;border-bottom:2px solid transparent;margin-bottom:-1px}
+.ptabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.pdocs{display:flex;flex-direction:column;gap:12px;margin-top:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.doc-form{display:flex;flex-direction:column;gap:10px;border:1px solid var(--accent);border-radius:8px;padding:12px}
+.doc-form textarea{border:1px solid var(--line);border-radius:8px;padding:9px 10px;background:var(--bg);color:var(--ink);font:inherit;font-size:14px;resize:vertical}
+.doc-form .sfield input{max-width:none}
+.file-btn{position:relative;overflow:hidden;cursor:pointer}
+.file-btn input{position:absolute;inset:0;opacity:0;cursor:pointer}

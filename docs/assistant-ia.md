@@ -45,19 +45,33 @@ Le point du jour préfigure la phase C : le même calcul, lancé chaque matin, a
   - chaque tâche reçoit son événement de création dans l'historique.
 - La demande compte dans la limite quotidienne d'IA et ses tokens sont enregistrés.
 
-## Base de connaissances métier (RAG)
+## Bases de connaissances (RAG)
 
-Les documents du dossier `rag/` (voir `rag/README.md`) sont découpés par section `##` et indexés en mémoire (BM25, `lib/rag/index.ts`). La recherche est plein texte, avec une racinisation légère : on garde le début des mots. Le titre de section pèse plus que le corps du texte.
+Deux bases, découpées en extraits par section `##` (ou par paragraphes pour un texte sans sections) et indexées en mémoire (BM25, `lib/rag/index.ts`) :
 
-Comment l'IA s'en sert :
-- **Assistant :** l'outil `search_knowledge` (premier de la liste) renvoie 4 extraits avec leur fichier source. Le prompt système demande de le consulter pour toute question de méthode (retards, blocages, escalade, planification, estimation, rapports, leçons) et de citer la source entre parenthèses.
-- **Cadrage d'un projet :** 4 extraits liés au texte du brief sont joints au message. Consigne : appliquer leurs règles (ordre des tâches, marges, dépendances, validations).
-- **Leçons apprises :** 4 extraits liés aux problèmes des notes sont joints. Consigne : s'en servir pour les recommandations, sans les présenter comme des faits observés.
+| Base | Dossier | Portée |
+|---|---|---|
+| Métier | `rag-metier/` | Commune : méthodes, règles du PMO, glossaire |
+| Client | `rag-client/<docs_dir>/` | Un dossier par projet (`projects.docs_dir`), créé avec une fiche projet à la création du projet |
 
-Limites et évolution :
-- la recherche est lexicale : le bon extrait arrive le plus souvent dans les 3 premiers, mais pas toujours en tête. C'est pourquoi on en transmet 4 ;
-- si la base dépasse quelques centaines d'extraits, il faudra passer à une recherche par le sens (plongements vectoriels, par exemple pgvector dans PostgreSQL) ;
-- les textes de `rag/` sont envoyés au modèle : ils ne doivent contenir ni données personnelles ni secrets.
+**Recherche.** Elle est plein texte, avec une racinisation légère : on garde le début des mots. L'intitulé de section pèse plus que le corps du texte. Le titre et les mots-clés du document donnent un petit bonus, au lieu d'être recopiés dans chaque extrait, ce qui rendrait ces mots indistincts dans un petit dossier.
+
+**Comment l'IA s'en sert :**
+- **Assistant :** deux outils.
+  - `search_project_documents` : les documents de CE projet uniquement, pour les questions sur le projet (décisions, contacts, exigences, accès). La liste des documents du projet figure dans le contexte (`documents`).
+  - `search_knowledge` : la base métier, pour les questions de méthode.
+
+  Le prompt système distingue les deux et demande de citer la source (`rag-client/...` ou `rag-metier/...`).
+- **Cadrage d'un projet :** 4 extraits métier liés au brief sont joints. Il n'y a pas encore de dossier client à ce stade : il est créé avec le projet.
+- **Leçons apprises :** 4 extraits métier liés aux problèmes des notes sont joints.
+
+**Cloisonnement.** La recherche dans un dossier client ne lit que ce dossier, et le nom du dossier vient de la base de données, jamais du modèle. Les noms de fichiers ajoutés sont nettoyés (pas de chemin) et un fichier existant n'est jamais écrasé.
+
+**Limites.**
+- La recherche est lexicale : le bon extrait arrive le plus souvent dans les 3 premiers. On en transmet 4.
+- Seuls les fichiers texte (`.md`, `.txt`) sont pris en charge ; il faut copier le texte d'un PDF ou d'un Word. L'extraction directe des PDF reste à faire.
+- Si les bases grossissent beaucoup, il faudra passer à une recherche par le sens (pgvector).
+- Les extraits pertinents sont envoyés au modèle : pas de secrets dans ces documents.
 
 ## Leçons apprises
 

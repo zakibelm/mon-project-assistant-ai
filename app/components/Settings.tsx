@@ -12,7 +12,7 @@ type Test = { ok: true; model: string; ms: number; reply: string } | { ok: false
 interface KDoc { source: string; title: string; tags: string[]; origin: string; sections: number }
 interface KHit { source: string; title: string; heading: string; text: string; score: number }
 
-/** Base de connaissances métier (dossier rag/) : documents chargés et recherche de test. */
+/** Base de connaissances métier (dossier rag-metier/) : documents chargés et recherche de test. */
 function Knowledge() {
   const [docs, setDocs] = useState<KDoc[] | null>(null);
   const [q, setQ] = useState("");
@@ -22,9 +22,9 @@ function Knowledge() {
   const search = async () => { if (!q.trim()) return; const d = await load(`?q=${encodeURIComponent(q.trim())}`); setDocs(d.docs); setHits(d.results); };
   return (
     <section className="panel sgroup">
-      <h2>Base de connaissances <span className="muted small">dossier rag/</span></h2>
-      <p className="muted small" style={{ margin: 0 }}>Documents métier (méthodes, règles du PMO, glossaire) que l&apos;IA consulte et cite avant de répondre. Pour en ajouter : un fichier Markdown dans le dossier <span className="mono">rag/</span> du serveur (voir <span className="mono">rag/README.md</span>).</p>
-      {!docs ? <p className="muted small">Chargement…</p> : docs.length === 0 ? <p className="warn-text">Aucun document : le dossier rag/ est vide ou introuvable.</p> : (
+      <h2>Base de connaissances métier <span className="muted small">dossier rag-metier/</span></h2>
+      <p className="muted small" style={{ margin: 0 }}>Documents métier (méthodes, règles du PMO, glossaire) que l&apos;IA consulte et cite avant de répondre. Pour en ajouter : un fichier Markdown dans le dossier <span className="mono">rag-metier/</span> du serveur (voir <span className="mono">rag-metier/README.md</span>). Les documents propres à chaque projet sont dans l&apos;onglet « Documents » du projet (dossier <span className="mono">rag-client/</span>).</p>
+      {!docs ? <p className="muted small">Chargement…</p> : docs.length === 0 ? <p className="warn-text">Aucun document : le dossier rag-metier/ est vide ou introuvable.</p> : (
         <ul className="kdocs">
           {docs.map((d) => (
             <li key={d.source}><strong>{d.title}</strong> <span className="muted small">· {d.sections} extrait{d.sections > 1 ? "s" : ""} · <span className="mono">{d.source}</span></span>

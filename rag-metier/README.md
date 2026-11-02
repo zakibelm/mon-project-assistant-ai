@@ -1,6 +1,11 @@
-# Base de connaissances (RAG)
+# Base de connaissances métier (RAG)
 
-Ce dossier contient les **connaissances métier** que l'IA consulte avant de répondre : méthodes de gestion de projet, règles du PMO, glossaire, modèles. L'assistant y cherche les passages utiles (recherche plein texte, sans service externe) et cite le fichier source.
+Ce dossier contient les **connaissances métier communes à tous les projets** que l'IA consulte avant de répondre : méthodes de gestion de projet, règles du PMO, glossaire, modèles. L'assistant y cherche les passages utiles (recherche plein texte, sans service externe) et cite le fichier source.
+
+## Métier ou client ?
+
+- **Ici (`rag-metier/`)** : ce qui vaut pour tous les projets (méthodes, règles du PMO, glossaire, modèles).
+- **Dans `rag-client/<projet>/`** : ce qui concerne un seul projet ou un seul client (comptes rendus, échanges, exigences, contrats). Voir `rag-client/README.md`.
 
 ## Ajouter un document
 
@@ -27,4 +32,4 @@ Ce dossier contient les **connaissances métier** que l'IA consulte avant de ré
 
 ## Sur le serveur
 
-Le dossier est monté dans le conteneur (`./rag` → `/app/rag`, en lecture seule). On peut donc modifier les documents sur le VPS sans reconstruire l'application : ils sont relus au plus tard une minute après.
+Le dossier est monté dans le conteneur (`./rag-metier` → `/app/rag-metier`, en lecture seule). On peut donc modifier les documents sur le VPS sans reconstruire l'application : ils sont relus au plus tard une minute après.

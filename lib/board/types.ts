@@ -70,6 +70,8 @@ export interface Board {
   description: string;
   startDate: string | null;
   endDate: string | null;
+  /** Dossier des documents du projet dans rag-client/. */
+  docsDir: string | null;
   members: { name: string; role: string; isManager: boolean }[];
   deliverables: { name: string; due: string | null }[];
   stakeholders: { name: string; role: string }[];
