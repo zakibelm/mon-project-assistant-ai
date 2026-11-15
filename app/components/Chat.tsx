@@ -1,5 +1,6 @@
 "use client";
 import { FormEvent, useEffect, useRef, useState } from "react";
+import Icon from "./Icons";
 
 export interface Msg { role: "user" | "assistant" | "error"; text: string; actions?: string[] }
 
@@ -15,8 +16,8 @@ export default function Chat({ projectName, msgs, busy, onSend }: {
 
   return (
     <aside className="chat" aria-label="Assistant">
-      <div className="head"><strong>Assistant</strong><div className="muted">{projectName}</div></div>
-      <div className="log" ref={logRef} aria-live="polite">
+      <div className="head"><span className="av"><Icon name="spark" /></span><div><strong>Assistant</strong><div className="muted">{projectName}</div></div></div>
+      <div className="log" ref={logRef} aria-live="polite" tabIndex={0} aria-label="Conversation avec l'assistant">
         {msgs.length === 0 && <div className="msg assistant">Je connais le contexte de ce projet. Que voulez-vous faire ?</div>}
         {msgs.map((m, k) => (
           <div key={k} className={`msg ${m.role}`}>
@@ -24,7 +25,7 @@ export default function Chat({ projectName, msgs, busy, onSend }: {
             {m.actions && m.actions.length > 0 && <div className="acts">{m.actions.map((a) => `✓ ${a}`).join("\n")}</div>}
           </div>
         ))}
-        {busy && <div className="msg assistant muted">Je réfléchis…</div>}
+        {busy && <div className="msg assistant muted pense">Je réfléchis…</div>}
       </div>
       {msgs.length === 0 && <div className="sugg">{SUGGESTIONS.map((s) => <button key={s} type="button" onClick={() => onSend(s)} disabled={busy}>{s}</button>)}</div>}
       <form onSubmit={submit}>

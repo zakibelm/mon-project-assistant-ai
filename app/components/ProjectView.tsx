@@ -4,6 +4,7 @@ import type { Board, ProblemType, Status } from "@/lib/board/types";
 import Chat, { Msg } from "./Chat";
 import { NoteCell, NoteEditor, RatingCell, RATING_HELP, ValidateCell, VALIDATE_HELP } from "./NoteCells";
 import ProjectDocs from "./ProjectDocs";
+import Icon from "./Icons";
 
 const LABEL: Record<Status, string> = { todo: "À faire", doing: "En cours", block: "Bloqué", done: "Terminé" };
 const fmt = (d: string | null) => (d ? `${d.slice(8)}/${d.slice(5, 7)}` : "—");
@@ -43,7 +44,7 @@ export default function ProjectView({ board, me, msgs, busy, onSend, onAssign, o
   const expected = board.items.filter((i) => i.late && !i.note).length;
   return (
     <div className="layout">
-      <main style={{ minWidth: 0 }}>
+      <div style={{ minWidth: 0 }}>
         <div className="phead">
           <h1>{board.name}</h1>
           <p>{board.description}</p>
@@ -111,7 +112,7 @@ export default function ProjectView({ board, me, msgs, busy, onSend, onAssign, o
                 const canEdit = i.owner === me || isManager;
                 return (
                   <div className="note-panel" role="region" aria-label={`Note de la tâche « ${i.name} »`}>
-                    <div className="note-panel-head"><strong>Note · {i.name}</strong><button className="x" onClick={() => setOpen(null)} aria-label="Fermer la note">✕</button></div>
+                    <div className="note-panel-head"><strong>Note · {i.name}</strong><button className="x" onClick={() => setOpen(null)} aria-label="Fermer la note"><Icon name="x" /></button></div>
                     <NoteEditor key={`${i.id}-${i.note?.problem ?? ""}`} item={i} canEdit={canEdit} isManager={isManager} busy={saving === i.id}
                       error={error?.id === i.id ? error.text : null} needRating={needRate === i.id}
                       onSave={(n) => run(i.id, () => onSaveNote(i.id, n))} onRate={(n) => rate(i.id, n)}
@@ -126,7 +127,7 @@ export default function ProjectView({ board, me, msgs, busy, onSend, onAssign, o
           Automatisations : {board.automations.map((a) => `${LABEL[a.onStatus]} → prévenir ${a.notify}`).join(" · ") || "aucune"}
           {board.notifications.length > 0 && <><br />Dernière notification : {board.notifications[0].text}</>}
         </div>}
-      </main>
+      </div>
       <Chat projectName={board.name} msgs={msgs} busy={busy} onSend={onSend} />
     </div>
   );
