@@ -8,6 +8,7 @@ import Settings from "./components/Settings";
 import NewProject from "./components/NewProject";
 import ProjectView from "./components/ProjectView";
 import Today from "./components/Today";
+import Icon from "./components/Icons";
 
 interface Usage { requests: number; input: number; output: number; cacheRead: number }
 const STATE_COLOR = { ok: "var(--st-done)", watch: "var(--st-doing)", late: "var(--st-block)" } as const;
@@ -80,24 +81,32 @@ export default function Home() {
 
   return (
     <>
-      <header className="topbar">
-        <div className="in">
-          <span className="brand">Assistant Projet</span>
+      <header className="appbar">
+        <span className="brand">
+          {/* La tuile du logo est servie par la convention d'icônes de Next (app/icon2.png). */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="brand-mark" src="/icon2.png" width={28} height={28} alt="" />
+          <span className="brand-txt">Assistant Projet</span>
+        </span>
+        {usage && <span className="usage"><span className="mono">{usage.requests}</span> demande(s) à l&apos;IA aujourd&apos;hui</span>}
+      </header>
+      <div className="shell">
+        <header className="topbar">
           <nav className="nav" aria-label="Navigation">
-            <button aria-current={view === "today" ? "page" : undefined} onClick={() => setView("today")}>Aujourd&apos;hui</button>
+            <button aria-current={view === "today" ? "page" : undefined} onClick={() => setView("today")}><Icon name="today" />Aujourd&apos;hui</button>
+            {!!brief?.pulse.length && <span className="nav-h" aria-hidden="true">Projets</span>}
             {brief?.pulse.map((p) => (
               <button key={p.id} aria-current={view === p.id ? "page" : undefined} onClick={() => setView(p.id)}>
                 <span className="dot" style={{ background: STATE_COLOR[p.state] }} />{p.name}
               </button>
             ))}
-            <button aria-current={view === "lessons" ? "page" : undefined} onClick={() => setView("lessons")}>Leçons apprises</button>
+            <span className="nav-sep" role="presentation" />
+            <button aria-current={view === "lessons" ? "page" : undefined} onClick={() => setView("lessons")}><Icon name="book" />Leçons apprises</button>
             <button className="new" aria-current={view === "new" ? "page" : undefined} onClick={() => setView("new")}>+ Nouveau projet</button>
+            <button className="gear" aria-current={view === "settings" ? "page" : undefined} onClick={() => setView("settings")}><Icon name="gear" />Paramètres</button>
           </nav>
-          {usage && <span className="usage mono">IA : {usage.requests} demande(s) aujourd&apos;hui</span>}
-          <button className={`gear ${view === "settings" ? "on" : ""}`} aria-current={view === "settings" ? "page" : undefined} onClick={() => setView("settings")}>Paramètres</button>
-        </div>
-      </header>
-      <div className="page">
+        </header>
+        <main className="page">
         {view === "today"
           ? <Today brief={brief} onAct={act} onOpen={setView} onNew={() => setView("new")} onChanged={loadBrief} />
           : view === "settings"
@@ -110,6 +119,7 @@ export default function Home() {
               onSaveNote={(id, n) => put(`/api/tasks/${id}/note`, n)}
               onRate={(id, rating) => put(`/api/tasks/${id}/rating`, { rating })}
               onValidate={(id, validated) => put(`/api/tasks/${id}/validation`, { validated })} />}
+        </main>
       </div>
     </>
   );

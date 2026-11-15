@@ -1,6 +1,7 @@
 "use client";
 import { FormEvent, useEffect, useState } from "react";
 import type { Brief, BriefAction, BriefItem, BriefTask } from "@/lib/brief";
+import Icon from "./Icons";
 
 const KIND: Record<BriefItem["kind"], string> = {
   blocked: "Bloqué", overdue: "En retard", due_soon: "Échéance proche",
@@ -8,6 +9,8 @@ const KIND: Record<BriefItem["kind"], string> = {
 };
 const STATE = { ok: "Dans les temps", watch: "À surveiller", late: "En retard" } as const;
 const STATUS = { todo: "À faire", doing: "En cours", block: "Bloqué", done: "Terminé" } as const;
+/** Questions fréquentes : un toucher remplit le champ, l'envoi reste un geste explicite. */
+const SUGGESTIONS = ["Résume le projet", "Qu'est-ce qui bloque ?", "Qui est le plus chargé ?"];
 const fmt = (d: string | null) => (d ? `${d.slice(8)}/${d.slice(5, 7)}` : "—");
 
 function longDate(iso: string) {
@@ -72,11 +75,11 @@ export default function Today({ brief, onAct, onOpen, onNew, onChanged }: {
   if (!brief) return <p className="muted" style={{ padding: 24 }}>Je prépare votre point du jour…</p>;
   if (!brief.pulse.length) {
     return (
-      <section className="hero">
-        <div className="date">{longDate(brief.today)}</div>
-        <h1>{greeting()} {brief.user}.</h1>
+      <section className="hero" aria-labelledby="bonjour">
+        <div className="hello"><h1 id="bonjour">{greeting()} {brief.user}.</h1></div>
         <p className="headline">Aucun projet pour l&apos;instant. Racontez-moi le premier : je prépare le contexte et le plan, vous validez.</p>
-        <div className="ask" style={{ display: "inline-flex" }}><button className="go" onClick={onNew}>Créer mon premier projet</button></div>
+        <p className="date">{longDate(brief.today)}</p>
+        <button className="go" style={{ marginTop: 16 }} onClick={onNew}>Créer mon premier projet</button>
       </section>
     );
   }
@@ -90,6 +93,7 @@ export default function Today({ brief, onAct, onOpen, onNew, onChanged }: {
   const urgent = shown.filter((i) => i.severity === 3);
   const later = shown.filter((i) => i.severity < 3);
   const remaining = live.length;
+  const decisions = live.filter((i) => i.severity === 3).length;
 
   /** Exécute une résolution directe, sans IA, puis recalcule le point du jour. */
   async function resolve(item: BriefItem, summary: string, run: () => Promise<void>, undo?: () => Promise<void>) {
@@ -227,56 +231,79 @@ export default function Today({ brief, onAct, onOpen, onNew, onChanged }: {
   };
 
   return (
-    <>
-      <section className="hero">
-        <div className="date">{longDate(brief.today)}</div>
-        <h1>{greeting()} {brief.user}.</h1>
-        <p className="headline">{remaining === 0 ? "Vous avez traité tous les points du jour." : brief.headline}</p>
+    <div className="poste">
+      <div className="desk">
+        <section className="hero" aria-labelledby="bonjour">
+          <div className="hello">
+            <h1 id="bonjour">{greeting()} {brief.user}.</h1>
+            <span className="tally" data-zero={decisions === 0 || undefined}>
+              <span className="tally-n" key={decisions}>{decisions}</span> décision{decisions > 1 ? "s" : ""}
+            </span>
+          </div>
+          <p className="headline">{remaining === 0 ? "Vous avez traité tous les points du jour." : brief.headline}</p>
+          <p className="date">{longDate(brief.today)}</p>
+        </section>
+
+        <section className="queue" aria-label="Décisions du jour">
+          <div>
+            <div className="section-h">
+              <h2>À décider aujourd&apos;hui</h2>
+              <span className="muted">{urgent.length ? `${urgent.filter((i) => !resolved[i.id]).length} à traiter` : "Rien d'urgent"}</span>
+            </div>
+            {urgent.length ? <div className="cards">{urgent.map(card)}</div> : <div className="empty">Aucun blocage ni retard à traiter. Belle journée.</div>}
+          </div>
+          {later.length > 0 && (
+            <div>
+              <div className="section-h"><h2>À surveiller cette semaine</h2><span className="muted">{later.filter((i) => !resolved[i.id]).length} à traiter</span></div>
+              <div className="cards">{later.map(card)}</div>
+            </div>
+          )}
+          {handled.length > 0 && (
+            <p className="muted handled">{handled.length} point{handled.length > 1 ? "s" : ""} masqué{handled.length > 1 ? "s" : ""} aujourd&apos;hui. <button className="btn ghost" onClick={reset}>Tout réafficher</button></p>
+          )}
+        </section>
+
+        <section className="rhythm" aria-labelledby="rythme">
+          <div className="section-h"><h2 id="rythme">Rythme des projets</h2><span className="muted">terminé / attendu aujourd&apos;hui</span></div>
+          <div className="pulse">
+            {brief.pulse.map((p) => {
+              const progress = p.total ? p.done / p.total : 0;
+              const expected = p.pace ? Math.min(1, progress / p.pace) : null;
+              return (
+                <button key={p.id} className="pcard" onClick={() => onOpen(p.id)}>
+                  <span className="row"><span className="name">{p.name}</span><span className={`chip ${p.state}`}>{STATE[p.state]}</span></span>
+                  <span className="track" role="img" aria-label={`${p.done} tâches terminées sur ${p.total}`}>
+                    <span className="fill" style={{ width: `${progress * 100}%` }} />
+                    {expected !== null && <span className="expect" style={{ left: `calc(${expected * 100}% - 1px)` }} title="Avancement attendu aujourd'hui" />}
+                  </span>
+                  <span className="legend">
+                    <span><span className="mono">{p.done}/{p.total}</span> terminées</span>
+                    <span>{p.pace !== null ? (p.pace >= 1 ? "en avance sur le rythme" : `${Math.round(p.pace * 100)} % du rythme attendu`) : ""}{p.endDate ? ` · fin ${fmt(p.endDate)}` : ""}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      </div>
+
+      <aside className="assist" aria-labelledby="assistant-h">
+        <div className="assist-h"><span className="av"><Icon name="spark" /></span><div><strong id="assistant-h">Assistant</strong><div className="muted">connaît vos {brief.pulse.length} projet{brief.pulse.length > 1 ? "s" : ""}</div></div></div>
+        <p className="bubble">Réglez les points du jour sur les cartes, ou posez-moi une question sur un projet.</p>
         <form className="ask" onSubmit={submit}>
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Demandez à l'assistant : « Prépare le plan de la semaine », « Qui est surchargé ? »…" aria-label="Question à l'assistant" />
-          <select value={scope} onChange={(e) => setScope(e.target.value)} aria-label="Projet concerné">
-            {brief.pulse.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-          <button className="go" disabled={!q.trim() || !scope}>Demander</button>
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ex. « Qui est le plus chargé ? »" aria-label="Question à l'assistant" autoComplete="off" />
+          <div className="ask-row">
+            <select value={scope} onChange={(e) => setScope(e.target.value)} aria-label="Projet concerné">
+              {brief.pulse.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+            <button className="go" disabled={!q.trim() || !scope}>Demander</button>
+          </div>
         </form>
-        <button className="btn ghost light" style={{ marginTop: 14 }} onClick={onNew}>+ Démarrer un nouveau projet à partir d&apos;un brief</button>
-      </section>
-
-      <div className="pulse" aria-label="Portefeuille">
-        {brief.pulse.map((p) => {
-          const progress = p.total ? p.done / p.total : 0;
-          const expected = p.pace ? Math.min(1, progress / p.pace) : null;
-          return (
-            <button key={p.id} className="pcard" onClick={() => onOpen(p.id)}>
-              <span className="row"><span className="name">{p.name}</span><span className={`chip ${p.state}`}>{STATE[p.state]}</span></span>
-              <span className="track" role="img" aria-label={`${p.done} tâches terminées sur ${p.total}`}>
-                <span className="fill" style={{ width: `${progress * 100}%` }} />
-                {expected !== null && <span className="expect" style={{ left: `calc(${expected * 100}% - 1px)` }} title="Avancement attendu aujourd'hui" />}
-              </span>
-              <span className="legend">
-                <span className="mono">{p.done}/{p.total} terminées</span>
-                <span>{p.pace !== null ? (p.pace >= 1 ? "en avance sur le rythme" : `${Math.round(p.pace * 100)} % du rythme attendu`) : ""}{p.endDate ? ` · fin ${fmt(p.endDate)}` : ""}</span>
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="section-h">
-        <h2>À décider aujourd&apos;hui</h2>
-        <span className="muted">{urgent.length ? `${urgent.filter((i) => !resolved[i.id]).length} à traiter` : "Rien d'urgent"}</span>
-      </div>
-      {urgent.length ? <div className="cards">{urgent.map(card)}</div> : <div className="empty">Aucun blocage ni retard à traiter. Belle journée.</div>}
-
-      {later.length > 0 && (
-        <>
-          <div className="section-h"><h2>À surveiller cette semaine</h2><span className="muted">{later.filter((i) => !resolved[i.id]).length} à traiter</span></div>
-          <div className="cards">{later.map(card)}</div>
-        </>
-      )}
-      {handled.length > 0 && (
-        <p className="done-note">{handled.length} point{handled.length > 1 ? "s" : ""} masqué{handled.length > 1 ? "s" : ""} aujourd&apos;hui. <button className="btn ghost" onClick={reset}>Tout réafficher</button></p>
-      )}
-    </>
+        <div className="chips" role="group" aria-label="Questions fréquentes">
+          {SUGGESTIONS.map((s) => <button key={s} type="button" onClick={() => setQ(s)}>{s}</button>)}
+        </div>
+        <button className="ghostlink" onClick={onNew}><Icon name="plus" />Démarrer un projet à partir d&apos;un texte</button>
+      </aside>
+    </div>
   );
 }

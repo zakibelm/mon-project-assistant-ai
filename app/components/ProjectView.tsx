@@ -43,7 +43,7 @@ export default function ProjectView({ board, me, msgs, busy, onSend, onAssign, o
   const expected = board.items.filter((i) => i.late && !i.note).length;
   return (
     <div className="layout">
-      <main style={{ minWidth: 0 }}>
+      <div style={{ minWidth: 0 }}>
         <div className="phead">
           <h1>{board.name}</h1>
           <p>{board.description}</p>
@@ -126,7 +126,7 @@ export default function ProjectView({ board, me, msgs, busy, onSend, onAssign, o
           Automatisations : {board.automations.map((a) => `${LABEL[a.onStatus]} → prévenir ${a.notify}`).join(" · ") || "aucune"}
           {board.notifications.length > 0 && <><br />Dernière notification : {board.notifications[0].text}</>}
         </div>}
-      </main>
+      </div>
       <Chat projectName={board.name} msgs={msgs} busy={busy} onSend={onSend} />
     </div>
   );
