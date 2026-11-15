@@ -91,7 +91,7 @@ export default function Home() {
         {usage && <span className="usage"><span className="mono">{usage.requests}</span> demande(s) à l&apos;IA aujourd&apos;hui</span>}
       </header>
       <div className="shell">
-        <header className="topbar">
+        <div className="topbar">
           <nav className="nav" aria-label="Navigation">
             <button aria-current={view === "today" ? "page" : undefined} onClick={() => setView("today")}><Icon name="today" />Aujourd&apos;hui</button>
             {!!brief?.pulse.length && <span className="nav-h" aria-hidden="true">Projets</span>}
@@ -105,7 +105,7 @@ export default function Home() {
             <button className="new" aria-current={view === "new" ? "page" : undefined} onClick={() => setView("new")}>+ Nouveau projet</button>
             <button className="gear" aria-current={view === "settings" ? "page" : undefined} onClick={() => setView("settings")}><Icon name="gear" />Paramètres</button>
           </nav>
-        </header>
+        </div>
         <main className="page">
         {view === "today"
           ? <Today brief={brief} onAct={act} onOpen={setView} onNew={() => setView("new")} onChanged={loadBrief} />

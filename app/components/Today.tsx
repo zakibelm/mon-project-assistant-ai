@@ -248,7 +248,7 @@ export default function Today({ brief, onAct, onOpen, onNew, onChanged }: {
         <section className="hero" aria-labelledby="bonjour">
           <div className="hello">
             <h1 id="bonjour">{greeting()} {brief.user}.</h1>
-            <span className="tally" data-zero={decisions === 0 || undefined}>
+            <span className="tally" role="status" data-zero={decisions === 0 || undefined}>
               <span className="tally-n">{decisions}</span> décision{decisions > 1 ? "s" : ""}
             </span>
           </div>

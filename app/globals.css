@@ -206,7 +206,7 @@ input::placeholder,textarea::placeholder{color:var(--muted);opacity:1}
 .rrow{display:flex;justify-content:space-between;align-items:center;gap:8px 12px;flex-wrap:wrap}
 .rname{min-width:0;flex:1 1 220px;font-size:14px}
 .rrow select{border:1px solid var(--field-line);border-radius:8px;padding:0 12px;min-height:var(--tap);background:var(--surface);color:var(--ink);font-size:14px;min-width:150px;max-width:100%}
-.ai-link{align-self:flex-start;display:inline-flex;align-items:center;gap:8px;border:0;background:transparent;color:var(--accent);font-size:13px;padding:0;min-height:28px;text-align:left}
+.ai-link{align-self:flex-start;display:inline-flex;align-items:center;gap:8px;border:0;background:transparent;color:var(--accent);font-size:13px;padding:0;min-height:40px;text-align:left}
 @media (hover:hover){.ai-link:hover{text-decoration:underline;text-underline-offset:3px}}
 .card-error{margin:0;color:var(--st-block);font-size:13px;font-weight:500}
 /* ce qui vient de changer : bref surlignage ambre, en opacité seulement */
@@ -232,11 +232,11 @@ table{border-collapse:collapse;width:100%}
 th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical-align:top}
 th{font-size:12px;color:var(--muted);background:var(--sunken);font-weight:500;white-space:nowrap}
 tr:last-child td{border-bottom:0}
-table.wide{min-width:700px}
+table.wide{min-width:760px}
 @media (min-width:761px){
   table.wide{table-layout:fixed}
   table.wide th:nth-child(2){width:104px} table.wide th:nth-child(3){width:112px} table.wide th:nth-child(4){width:76px}
-  table.wide th:nth-child(5){width:140px} table.wide th:nth-child(6){width:120px} table.wide th:nth-child(7){width:96px}
+  table.wide th:nth-child(5){width:112px} table.wide th:nth-child(6){width:128px} table.wide th:nth-child(7){width:96px}
   table.wide .validate-box{white-space:normal;align-items:flex-start}
   table.wide .validate-box input{margin-top:2px}
 }
