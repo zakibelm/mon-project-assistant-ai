@@ -1,24 +1,42 @@
-/* Identité : encre profonde, sarcelle, papier froid. Le point du jour est la page d'accueil. */
+/* « Le poste du matin » : gris bleutés froids, une seule couleur d'action (vert canard), quatre couleurs d'état.
+   Mêmes rôles et mêmes contrastes AA en thème sombre (automatique). */
 :root{
-  --bg:#F2F4F3; --surface:#FFFFFF; --sunken:#E8ECEB; --line:#D5DCDA; --ink:#0F1E24; --muted:#5A6A70;
-  --accent:#0B6E6C; --accent-ink:#FFFFFF; --accent-soft:#D3EAE8; --hero:#0F1E24; --hero-ink:#EAF2F1; --hero-muted:#9FB5B3;
-  --st-todo:#8A979E; --st-doing:#C98A0B; --st-block:#C2413A; --st-done:#2E8B57;
-  --sev3:#C2413A; --sev2:#C98A0B; --sev1:#6E8A92;
-  --f-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
-  --f-body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
-  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
-  --r:10px;
+  --bg:#EEF1F4; --surface:#FFFFFF; --sunken:#E4E9EE; --line:#D3DAE1; --line-strong:#AEB9C4; --field-line:#6E7B8A;
+  --ink:#121A24; --muted:#4E5B6B; --accent:#0B6E6C; --accent-ink:#FFFFFF; --accent-soft:#DCEDEC; --accent-press:#09595A;
+  --st-todo:#5E6B7A; --st-doing:#8A5A00; --st-block:#B3261E; --st-done:#1A6E44; --on-pill:#FFFFFF;
+  --soft-doing:#F6EBD6; --soft-block:#F8E3E1; --soft-done:#DDEFE5;
+  --sev3:var(--st-block); --sev2:var(--st-doing); --sev1:#7A8796;
+  --spot:#C98A0B; --spot-soft:#FBEFC9;
+  --shadow:0 1px 2px rgb(18 26 36 / .06), 0 8px 24px -12px rgb(18 26 36 / .18);
+  --f-display:var(--font-archivo),"Archivo","Segoe UI",system-ui,sans-serif;
+  --f-body:var(--font-plex-sans),"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+  --f-mono:var(--font-plex-mono),"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --r:10px; --rail:236px; --side:344px; --tap:40px;
+  --ease:cubic-bezier(.2,.7,.2,1);
+  /* anciens noms, conservés le temps de la refonte des composants */
+  --hero:var(--surface); --hero-ink:var(--ink); --hero-muted:var(--muted);
+  color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root{
-  --bg:#0B1418; --surface:#122027; --sunken:#182A32; --line:#25383F; --ink:#E3ECEB; --muted:#93A6A9;
-  --accent:#3FB5B1; --accent-ink:#04201F; --accent-soft:#163A39; --hero:#050C0F; --hero-ink:#E3ECEB; --hero-muted:#8AA3A3;
-  --st-todo:#7D8B92; --st-doing:#E0A52C; --st-block:#E2675F; --st-done:#4CB27A;
-  --sev3:#E2675F; --sev2:#E0A52C; --sev1:#7D9AA2; color-scheme:dark}}
+  --bg:#0E141B; --surface:#161E27; --sunken:#1D2732; --line:#2A3644; --line-strong:#3D4B5B; --field-line:#7D8DA0;
+  --ink:#E6EBF0; --muted:#9AA8B7; --accent:#5CC4BF; --accent-ink:#04201F; --accent-soft:#16383A; --accent-press:#7FD3CF;
+  --st-todo:#A9B4C2; --st-doing:#E5AD52; --st-block:#F2958B; --st-done:#6BC795; --on-pill:#0E141B;
+  --soft-doing:#3A2C12; --soft-block:#3D1F1C; --soft-done:#173326;
+  --sev1:#7D8B9A; --spot:#E5AD52; --spot-soft:#3A2C12;
+  --shadow:0 1px 2px rgb(0 0 0 / .3), 0 10px 28px -14px rgb(0 0 0 / .6); color-scheme:dark}}
+
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 var(--f-body)}
-button,input,select{font:inherit;color:inherit}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html,body{background:var(--bg)}
+body{margin:0;color:var(--ink);font:14px/1.5 var(--f-body);-webkit-font-smoothing:antialiased;overflow-x:clip}
+button,input,select,textarea{font:inherit;color:inherit}
+button,a,select,input,textarea,label{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 button{cursor:pointer}
+h1,h2,h3,h4{text-wrap:balance}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+::selection{background:var(--accent-soft);color:var(--ink)}
+input,textarea{caret-color:var(--accent)}
+input::placeholder,textarea::placeholder{color:var(--muted);opacity:1}
 .muted{color:var(--muted);font-size:13px}
 .mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 
