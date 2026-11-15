@@ -197,7 +197,7 @@ input::placeholder,textarea::placeholder{color:var(--muted);opacity:1}
 .card.resolved .acts{flex:none}
 .card.resolved .card-error{flex-basis:100%}
 .done-line{margin:2px 0 0;font-size:14px;color:var(--ink)!important}
-.ok-mark{display:inline-block}
+.ok-mark{display:inline-block;transform-box:fill-box;transform-origin:50% 50%}
 .resolve{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;background:var(--sunken);border-radius:8px;padding:12px}
 .resolve label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);min-width:0}
 .resolve input[type="date"]{border:1px solid var(--field-line);border-radius:8px;padding:0 12px;min-height:var(--tap);background:var(--surface);color:var(--ink);font-family:var(--f-mono)}

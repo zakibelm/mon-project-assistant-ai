@@ -1,7 +1,8 @@
 "use client";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import type { Brief, BriefAction, BriefItem, BriefTask } from "@/lib/brief";
 import Icon from "./Icons";
+import { useDeskMotion } from "./useDeskMotion";
 
 const KIND: Record<BriefItem["kind"], string> = {
   blocked: "Bloqué", overdue: "En retard", due_soon: "Échéance proche",
@@ -67,6 +68,9 @@ export default function Today({ brief, onAct, onOpen, onNew, onChanged }: {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<{ id: string; text: string } | null>(null);
   const { handled, mark, reset } = useHandled(brief?.today);
+  const deskRef = useRef<HTMLDivElement>(null);
+  const lastOrder = useRef<string[]>([]);
+  useDeskMotion(deskRef, brief ? brief.items.filter((i) => i.severity === 3 && !handled.includes(i.id) && !resolved[i.id]).length : null);
 
   useEffect(() => {
     if (brief && !scope) setScope(brief.items[0]?.projectId ?? brief.pulse[0]?.id ?? "");
@@ -89,7 +93,12 @@ export default function Today({ brief, onAct, onOpen, onNew, onChanged }: {
   const live = brief.items.filter((i) => !handled.includes(i.id) && !resolved[i.id]);
   const shown = [...live, ...Object.values(resolved).map((r) => r.item)];
   const order = new Map(brief.items.map((i, k) => [i.id, k]));
-  shown.sort((a, b) => b.severity - a.severity || (order.get(a.id) ?? 99) - (order.get(b.id) ?? 99));
+  // Les cartes déjà affichées gardent leur place (une carte réglée, ou rétablie par « Annuler », ne saute pas en fin
+  // de liste quand le point est recalculé) ; les nouveaux points se rangent après, dans l'ordre du point du jour.
+  const seen = new Map(lastOrder.current.map((id, k) => [id, k]));
+  const rank = (i: BriefItem) => seen.get(i.id) ?? 1000 + (order.get(i.id) ?? 99);
+  shown.sort((a, b) => b.severity - a.severity || rank(a) - rank(b));
+  for (const i of shown) if (!seen.has(i.id)) lastOrder.current.push(i.id); // on n'oublie pas un point le temps d'un rechargement
   const urgent = shown.filter((i) => i.severity === 3);
   const later = shown.filter((i) => i.severity < 3);
   const remaining = live.length;
@@ -234,13 +243,13 @@ export default function Today({ brief, onAct, onOpen, onNew, onChanged }: {
   };
 
   return (
-    <div className="poste">
+    <div className="poste" ref={deskRef}>
       <div className="desk">
         <section className="hero" aria-labelledby="bonjour">
           <div className="hello">
             <h1 id="bonjour">{greeting()} {brief.user}.</h1>
             <span className="tally" data-zero={decisions === 0 || undefined}>
-              <span className="tally-n" key={decisions}>{decisions}</span> décision{decisions > 1 ? "s" : ""}
+              <span className="tally-n">{decisions}</span> décision{decisions > 1 ? "s" : ""}
             </span>
           </div>
           <p className="headline">{remaining === 0 ? "Vous avez traité tous les points du jour." : brief.headline}</p>
