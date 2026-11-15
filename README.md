@@ -53,7 +53,6 @@ Deux bases, que l'IA consulte avant de répondre, en citant ses sources :
 - **Recherche :** plein texte (BM25, `lib/rag/index.ts`), en mémoire, sans service externe ni coût. Les fichiers sont relus quand ils changent.
 - **Confidentialité :** `rag-client/` n'est jamais versionné dans Git (sauf son README) et n'entre pas dans l'image Docker. Il est monté depuis le serveur et doit être **sauvegardé avec la base de données**.
 - **Paramètres** montre la base métier ; l'onglet **Documents** de chaque projet montre la base client. Les deux permettent de tester une recherche.
-- **Démo :** `npx tsx scripts/rag-export.mts` exporte les extraits métier pour mettre à jour la copie embarquée dans `demo/index.html`.
 
 ## Démarrer en local
 
