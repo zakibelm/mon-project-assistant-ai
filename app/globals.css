@@ -371,12 +371,13 @@ select.owner[data-empty="true"]{color:var(--st-block)}
 .add{display:inline-flex;align-items:center;gap:4px;border:1px dashed var(--line-strong);background:transparent;color:var(--muted);border-radius:8px;min-height:36px;padding:0 12px;font-size:13px;margin-top:8px}
 @media (hover:hover){.add:hover{color:var(--accent);border-color:var(--accent)}}
 .pgroup{margin-bottom:16px}
-.plan table{min-width:640px}
+.plan table{min-width:600px;table-layout:fixed}
 .plan td{padding:4px 8px;vertical-align:middle}
-.plan td.c-owner{width:150px}
-.plan td.c-due{width:160px}
-.plan td.c-prio{width:120px}
+.plan td.c-owner{width:128px}
+.plan td.c-due{width:150px}
+.plan td.c-prio{width:112px}
 .plan td.c-x{width:48px}
+.plan td .cell{text-overflow:ellipsis}
 .cell{width:100%;border:1px solid transparent;background:transparent;border-radius:6px;padding:0 8px;min-height:36px;color:var(--ink);font-size:14px}
 .cell:hover,.cell:focus{border-color:var(--field-line);background:var(--bg)}
 select.cell[data-empty="true"]{color:var(--st-block)}
