@@ -114,7 +114,7 @@ export default function Settings() {
         <h1>Paramètres</h1>
         <p className="muted">Modèle d&apos;IA et clé OpenRouter utilisés par l&apos;assistant, le cadrage des projets et les leçons apprises.</p>
       </div>
-      {!canEdit && <p className="msg error">Lecture seule : seul un chef de projet peut modifier ces paramètres.</p>}
+      {!canEdit && <p className="readonly">Lecture seule : seul un chef de projet peut modifier ces paramètres.</p>}
 
       <section className="panel sgroup">
         <h2>Clé OpenRouter</h2>

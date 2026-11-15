@@ -190,27 +190,30 @@ export default function Today({ brief, onAct, onOpen, onNew, onChanged }: {
     );
   }
 
+  // Une carte = une décision. Une fois réglée, elle se replie en une ligne « ✓ Réglé » avec « Annuler ».
   const card = (item: BriefItem) => {
     const r = resolved[item.id];
     if (r) {
       return (
-        <article className="card resolved" data-sev={item.severity} data-kind={item.kind} key={item.id}>
-          <div className="stripe" />
+        <article className="card resolved" data-sev={item.severity} data-kind={item.kind} data-flip-id={item.id} key={item.id}>
           <div className="body">
-            <div style={{ minWidth: 0 }}><div className="meta"><span className="kind">✓ Réglé</span><span>· {item.projectName}</span></div><p className="done-line">{r.summary}</p></div>
+            <div style={{ minWidth: 0 }}>
+              <p className="done-line">{r.summary}</p>
+              <div className="meta"><span className="kind"><Icon name="check" className="ok-mark" />Réglé</span><span>{item.projectName}</span></div>
+            </div>
             <div className="acts">{r.undo && <button className="btn ghost" disabled={busy === item.id} onClick={() => cancel(item.id)}>Annuler</button>}</div>
+            {error?.id === item.id && <p className="card-error" role="alert">{error.text}</p>}
           </div>
         </article>
       );
     }
     const ask = item.actions.find((a) => a.type === "ask");
     return (
-      <article className="card" data-sev={item.severity} data-kind={item.kind} key={item.id}>
-        <div className="stripe" />
+      <article className="card" data-sev={item.severity} data-kind={item.kind} data-flip-id={item.id} key={item.id}>
         <div className="body">
           <div style={{ minWidth: 0 }}>
-            <div className="meta"><span className="kind">{KIND[item.kind]}</span><span>· {item.projectName}</span></div>
             <h3>{item.title}</h3>
+            <div className="meta"><span className="kind">{KIND[item.kind]}</span><span>{item.projectName}</span></div>
             <p>{item.detail}</p>
           </div>
           <div className="acts">
@@ -219,7 +222,7 @@ export default function Today({ brief, onAct, onOpen, onNew, onChanged }: {
           </div>
           {panel(item)}
           {error?.id === item.id && <p className="card-error" role="alert">{error.text}</p>}
-          {ask && <button className="ai-link" onClick={() => onAct(ask)}>Ou demander à l&apos;assistant : « {ask.label} »</button>}
+          {ask && <button className="ai-link" onClick={() => onAct(ask)}><Icon name="ask" />Ou demander à l&apos;assistant : « {ask.label} »</button>}
         </div>
       </article>
     );

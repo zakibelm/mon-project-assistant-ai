@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import type { ProjectDraft } from "@/lib/ai/draft";
+import Icon from "./Icons";
 
 const EXAMPLE = `Bonjour,
 
@@ -48,7 +49,7 @@ export default function NewProject({ onCreated, onCancel }: { onCreated: (projec
   if (!draft) {
     return (
       <section className="hero intake">
-        <div className="date">Nouveau projet</div>
+        <p className="date">Nouveau projet</p>
         <h1>Racontez-moi le projet.</h1>
         <p className="headline">Collez un brief, un courriel ou vos notes de réunion. Je prépare le contexte, l&apos;équipe et un plan complet que vous relirez avant de créer le projet.</p>
         <div className="intake-box">
@@ -56,16 +57,16 @@ export default function NewProject({ onCreated, onCancel }: { onCreated: (projec
             placeholder="Objectif, dates, livrables, qui fait quoi, contraintes… Écrivez comme à un collègue."
             aria-label="Description du projet" disabled={busy === "draft"} />
           <div className="intake-actions">
-            <button className="btn ghost light" onClick={() => setText(EXAMPLE)} disabled={busy === "draft"}>Essayer avec un exemple</button>
+            <button className="btn ghost" onClick={() => setText(EXAMPLE)} disabled={busy === "draft"}>Essayer avec un exemple</button>
             <span style={{ flex: 1 }} />
-            <button className="btn ghost light" onClick={() => setDraft(EMPTY)} disabled={busy === "draft"}>Remplir moi-même</button>
+            <button className="btn" onClick={() => setDraft(EMPTY)} disabled={busy === "draft"}>Remplir moi-même</button>
             <button className="go" onClick={prepare} disabled={busy === "draft" || text.trim().length < 20}>
               {busy === "draft" ? "Je lis et je planifie…" : "Préparer le projet"}
             </button>
           </div>
         </div>
         {error && <p className="intake-error" role="alert">{error}</p>}
-        <button className="btn ghost light" style={{ marginTop: 14 }} onClick={onCancel}>← Retour à Aujourd&apos;hui</button>
+        <button className="ghostlink back" onClick={onCancel}><Icon name="back" />Retour à Aujourd&apos;hui</button>
       </section>
     );
   }
@@ -115,7 +116,7 @@ export default function NewProject({ onCreated, onCancel }: { onCreated: (projec
             <div className="line" key={i}>
               <input value={d.name} onChange={(e) => set({ deliverables: draft.deliverables.map((x, k) => k === i ? { ...x, name: e.target.value } : x) })} aria-label="Livrable" />
               <input type="date" value={d.due ?? ""} onChange={(e) => set({ deliverables: draft.deliverables.map((x, k) => k === i ? { ...x, due: e.target.value || null } : x) })} aria-label="Date du livrable" />
-              <button className="x" onClick={() => set({ deliverables: draft.deliverables.filter((_, k) => k !== i) })} aria-label="Retirer">✕</button>
+              <button className="x" onClick={() => set({ deliverables: draft.deliverables.filter((_, k) => k !== i) })} aria-label="Retirer"><Icon name="x" /></button>
             </div>
           ))}
           <button className="add" onClick={() => set({ deliverables: [...draft.deliverables, { name: "Nouveau livrable", due: null }] })}>+ Livrable</button>
@@ -124,7 +125,7 @@ export default function NewProject({ onCreated, onCancel }: { onCreated: (projec
             <div className="line" key={i}>
               <input value={d.name} onChange={(e) => set({ stakeholders: draft.stakeholders.map((x, k) => k === i ? { ...x, name: e.target.value } : x) })} aria-label="Partie prenante" />
               <input value={d.role} onChange={(e) => set({ stakeholders: draft.stakeholders.map((x, k) => k === i ? { ...x, role: e.target.value } : x) })} aria-label="Rôle" placeholder="Rôle" />
-              <button className="x" onClick={() => set({ stakeholders: draft.stakeholders.filter((_, k) => k !== i) })} aria-label="Retirer">✕</button>
+              <button className="x" onClick={() => set({ stakeholders: draft.stakeholders.filter((_, k) => k !== i) })} aria-label="Retirer"><Icon name="x" /></button>
             </div>
           ))}
           <button className="add" onClick={() => set({ stakeholders: [...draft.stakeholders, { name: "", role: "" }] })}>+ Partie prenante</button>
@@ -142,7 +143,7 @@ export default function NewProject({ onCreated, onCancel }: { onCreated: (projec
               <button className="x" disabled={draft.team.length === 1} onClick={() => set({
                 team: draft.team.filter((_, k) => k !== i),
                 groups: draft.groups.map((g) => ({ ...g, tasks: g.tasks.map((t) => t.owner === m.name ? { ...t, owner: null } : t) })),
-              })} aria-label="Retirer">✕</button>
+              })} aria-label="Retirer"><Icon name="x" /></button>
             </div>
           ))}
           <button className="add" onClick={() => set({ team: [...draft.team, { name: `Membre ${draft.team.length + 1}`, role: "membre" }] })}>+ Membre</button>
@@ -154,7 +155,7 @@ export default function NewProject({ onCreated, onCancel }: { onCreated: (projec
             <div className="pgroup" key={gi}>
               <div className="line">
                 <input className="gname" value={g.name} onChange={(e) => set({ groups: draft.groups.map((x, k) => k === gi ? { ...x, name: e.target.value } : x) })} aria-label="Nom de la phase" />
-                <button className="x" onClick={() => set({ groups: draft.groups.filter((_, k) => k !== gi) })} disabled={draft.groups.length === 1} aria-label="Retirer la phase">✕</button>
+                <button className="x" onClick={() => set({ groups: draft.groups.filter((_, k) => k !== gi) })} disabled={draft.groups.length === 1} aria-label="Retirer la phase"><Icon name="x" /></button>
               </div>
               <div className="tscroll">
                 <table>
@@ -177,7 +178,7 @@ export default function NewProject({ onCreated, onCancel }: { onCreated: (projec
                             {PRIOS.map((p) => <option key={p}>{p}</option>)}
                           </select>
                         </td>
-                        <td className="c-x"><button className="x" onClick={() => set({ groups: draft.groups.map((x, k) => k === gi ? { ...x, tasks: x.tasks.filter((_, j) => j !== ti) } : x) })} aria-label="Retirer la tâche">✕</button></td>
+                        <td className="c-x"><button className="x" onClick={() => set({ groups: draft.groups.map((x, k) => k === gi ? { ...x, tasks: x.tasks.filter((_, j) => j !== ti) } : x) })} aria-label="Retirer la tâche"><Icon name="x" /></button></td>
                       </tr>
                     ))}
                   </tbody>
